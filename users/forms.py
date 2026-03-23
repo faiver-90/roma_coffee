@@ -3,13 +3,17 @@ from django.contrib.auth import authenticate, password_validation
 from django.core.exceptions import ValidationError
 
 from .models import PasswordResetCode, User
+from .utils import normalize_phone, phone_lookup_values
 
 
 class PhoneInputMixin:
     phone_widget = forms.TextInput(
         attrs={
             'autocomplete': 'tel',
-            'placeholder': '+7 999 123-45-67',
+            'placeholder': '+7 999 999 99 99',
+            'inputmode': 'numeric',
+            'maxlength': '16',
+            'data-phone-mask': 'true',
         }
     )
 
@@ -33,8 +37,8 @@ class RegisterForm(PhoneInputMixin, forms.ModelForm):
         labels = {'phone': 'Телефон'}
 
     def clean_phone(self):
-        phone = self.cleaned_data['phone'].strip()
-        if User.objects.filter(phone=phone).exists():
+        phone = normalize_phone(self.cleaned_data['phone'])
+        if User.objects.filter(phone__in=phone_lookup_values(phone)).exists():
             raise ValidationError('Пользователь с таким телефоном уже существует.')
         return phone
 
@@ -81,7 +85,7 @@ class LoginForm(PhoneInputMixin, forms.Form):
         super().__init__(*args, **kwargs)
 
     def clean_phone(self):
-        return self.cleaned_data['phone'].strip()
+        return normalize_phone(self.cleaned_data['phone'])
 
     def clean(self):
         cleaned_data = super().clean()
@@ -103,7 +107,7 @@ class PasswordResetRequestForm(PhoneInputMixin, forms.Form):
     phone = forms.CharField(label='Телефон', widget=PhoneInputMixin.phone_widget)
 
     def clean_phone(self):
-        return self.cleaned_data['phone'].strip()
+        return normalize_phone(self.cleaned_data['phone'])
 
 
 class PasswordResetConfirmForm(PhoneInputMixin, forms.Form):
@@ -126,7 +130,7 @@ class PasswordResetConfirmForm(PhoneInputMixin, forms.Form):
     )
 
     def clean_phone(self):
-        return self.cleaned_data['phone'].strip()
+        return normalize_phone(self.cleaned_data['phone'])
 
     def clean(self):
         cleaned_data = super().clean()
@@ -140,7 +144,7 @@ class PasswordResetConfirmForm(PhoneInputMixin, forms.Form):
             self.add_error('password2', 'Пароли не совпадают.')
 
         if phone:
-            user = User.objects.filter(phone=phone).first()
+            user = User.objects.filter(phone__in=phone_lookup_values(phone)).first()
             if user is None:
                 self.add_error('phone', 'Пользователь не найден.')
 

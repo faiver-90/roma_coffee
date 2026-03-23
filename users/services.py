@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from .domain.loyalty import LoyaltyService
 from .domain.roles import UserRole
 from .models import PasswordResetCode, RefreshSession, User
+from .utils import phone_lookup_values
 
 
 def get_client_ip(request) -> str | None:
@@ -55,7 +56,7 @@ def revoke_refresh_token(refresh_token: str) -> None:
 
 
 def issue_password_reset_code(phone: str):
-    user = User.objects.filter(phone=phone).first()
+    user = User.objects.filter(phone__in=phone_lookup_values(phone)).first()
     if user is None:
         return None
 

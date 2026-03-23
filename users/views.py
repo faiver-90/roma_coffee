@@ -123,6 +123,8 @@ class DashboardView(AuthenticatedTemplateView):
         context = (
             build_barista_dashboard_view_model(
                 self.auth_user,
+                qr_code_image=qr_code_image,
+                dashboard_url=reverse('users:dashboard'),
                 barista_url=reverse('users:barista_dashboard'),
                 logout_url=reverse('users:logout'),
             )
@@ -137,8 +139,6 @@ class DashboardView(AuthenticatedTemplateView):
         return render(request, self.template_name, context)
 
     def post(self, request: HttpRequest) -> HttpResponse:
-        if self.auth_user.is_barista:
-            return redirect('users:barista_dashboard')
         regenerate_user_qr_code(self.auth_user)
         messages.success(request, 'QR-код обновлен.')
         return redirect('users:dashboard')
@@ -150,7 +150,7 @@ class DashboardStateView(AuthenticatedTemplateView):
             return JsonResponse(
                 {
                     'role': self.auth_user.get_role_display(),
-                    'phone': self.auth_user.phone,
+                    'phone': self.auth_user.formatted_phone,
                 }
             )
 
@@ -161,7 +161,26 @@ class DashboardStateView(AuthenticatedTemplateView):
             logout_url=reverse('users:logout'),
         )
         card_map = {card.key: card.value for card in context['cards']}
+        if context['celebration_modal'] is not None:
+            card_map['celebration_modal'] = {
+                'title': context['celebration_modal'].title,
+                'message': context['celebration_modal'].message,
+                'accent': context['celebration_modal'].accent,
+            }
+        else:
+            card_map['celebration_modal'] = None
         return JsonResponse(card_map)
+
+
+class DashboardQrRefreshView(AuthenticatedTemplateView):
+    def post(self, request: HttpRequest) -> HttpResponse:
+        regenerate_user_qr_code(self.auth_user)
+        return JsonResponse(
+            {
+                'qr_code_uuid': str(self.auth_user.qr_code_uuid),
+                'qr_code_image': build_qr_code_image_base64(str(self.auth_user.qr_code_uuid)),
+            }
+        )
 
 
 class BaristaDashboardView(RoleRequiredView):

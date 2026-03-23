@@ -5,10 +5,12 @@ from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from .domain.loyalty import LoyaltyProgram, LoyaltyStatus
 from .domain.roles import UserRole
+from .utils import format_phone, normalize_phone
 
 
 class UserManager(BaseUserManager):
@@ -17,7 +19,7 @@ class UserManager(BaseUserManager):
     def _create_user(self, phone: str, password: str | None, **extra_fields):
         if not phone:
             raise ValueError('The phone field must be set.')
-        phone = phone.strip()
+        phone = normalize_phone(phone)
         user = self.model(phone=phone, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -39,6 +41,11 @@ class UserManager(BaseUserManager):
             raise ValueError('Superuser must have is_superuser=True.')
 
         return self._create_user(phone, password, **extra_fields)
+
+    def get_by_natural_key(self, username):
+        canonical = normalize_phone(username)
+        formatted = format_phone(canonical)
+        return self.get(Q(phone=canonical) | Q(phone=formatted))
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -63,6 +70,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self) -> str:
         return self.phone
+
+    def save(self, *args, **kwargs):
+        if self.phone:
+            self.phone = normalize_phone(self.phone)
+        super().save(*args, **kwargs)
+
+    @property
+    def formatted_phone(self) -> str:
+        return format_phone(self.phone)
 
     @property
     def is_barista(self) -> bool:

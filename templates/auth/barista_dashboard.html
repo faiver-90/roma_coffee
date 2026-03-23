@@ -5,22 +5,98 @@
 <style>
     .scanner-panel {
         display: grid;
-        gap: 12px;
-        padding: 18px;
+        gap: 14px;
+        padding: 20px;
         border: 1px solid rgba(87, 53, 31, 0.14);
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.56);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.64);
     }
 
     .scanner-box {
         overflow: hidden;
-        border-radius: 20px;
+        border-radius: 22px;
         background: rgba(47, 31, 23, 0.08);
+        min-height: 260px;
+    }
+
+    .scanner-primary {
+        width: 100%;
+        min-height: 64px;
+        border-radius: 22px;
+        font-size: 1.08rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        background: linear-gradient(135deg, #8f431d, #c86a2d);
+        box-shadow: 0 18px 38px rgba(143, 67, 29, 0.28);
+        animation: scannerPulse 1.9s ease-in-out infinite;
+    }
+
+    .scanner-primary:hover {
+        background: linear-gradient(135deg, #7a3818, #b85c23);
+    }
+
+    .scanner-secondary-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .scanner-secondary-row .button {
+        flex: 1 1 180px;
     }
 
     .scanner-status {
         color: var(--muted);
-        font-size: 0.92rem;
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+
+    .celebration-modal[hidden] {
+        display: none;
+    }
+
+    .celebration-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: rgba(47, 31, 23, 0.46);
+        backdrop-filter: blur(6px);
+    }
+
+    .celebration-card {
+        width: min(100%, 460px);
+        padding: 28px;
+        border-radius: 28px;
+        color: #2f1f17;
+        box-shadow: 0 28px 80px rgba(47, 31, 23, 0.25);
+        background: linear-gradient(160deg, #fff2c9, #f0bf53);
+    }
+
+    .celebration-card h3 {
+        margin: 0 0 12px;
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    .celebration-card p {
+        margin: 0 0 22px;
+        color: rgba(47, 31, 23, 0.88);
+        line-height: 1.6;
+    }
+
+    @keyframes scannerPulse {
+        0%,
+        100% {
+            transform: translateY(0);
+            box-shadow: 0 18px 38px rgba(143, 67, 29, 0.28);
+        }
+        50% {
+            transform: translateY(-1px);
+            box-shadow: 0 24px 44px rgba(143, 67, 29, 0.38);
+        }
     }
 </style>
 {% endblock %}
@@ -30,13 +106,12 @@
 
 <div class="stack">
     <div class="scanner-panel">
+        <button class="button scanner-primary" type="button" id="start-scanner-button">Запустить сканер</button>
         <div class="scanner-box" id="qr-reader"></div>
-        <div class="button-row">
+        <div class="scanner-secondary-row">
             <a class="button button-secondary" href="{% url 'users:dashboard' %}">В кабинет</a>
-            <button class="button" type="button" id="start-scanner-button">Запустить сканер</button>
-            <button class="button button-secondary" type="button" id="stop-scanner-button">Остановить</button>
         </div>
-        <div class="scanner-status" id="scanner-status">Сканер еще не запущен.</div>
+        <div class="scanner-status" id="scanner-status">Нажмите на большую кнопку выше, чтобы открыть камеру и начать сканирование.</div>
     </div>
 
     <form method="post" class="auth-form" id="barista-scan-form">
@@ -57,21 +132,47 @@
     </div>
     <div class="field">
         <span class="field-label">Действие</span>
-        <div class="field-help">{{ scan_result.barista_message }}</div>
+        <div class="field-help">{% if scan_result.celebration_modal %}Подарочный кофе активирован.{% else %}{{ scan_result.barista_message }}{% endif %}</div>
     </div>
     {% endif %}
+</div>
+
+<div class="celebration-modal" id="barista-celebration-modal"{% if not scan_result or not scan_result.celebration_modal %} hidden{% endif %}>
+    <div class="celebration-card">
+        <h3>{% if scan_result and scan_result.celebration_modal %}{{ scan_result.celebration_modal.title }}{% else %}Подарочный кофе{% endif %}</h3>
+        <p>{% if scan_result and scan_result.celebration_modal %}{{ scan_result.celebration_modal.message }}{% endif %}</p>
+        <button class="button" type="button" id="barista-celebration-close">Понятно</button>
+    </div>
 </div>
 
 <script src="https://unpkg.com/html5-qrcode" defer></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const startButton = document.getElementById("start-scanner-button");
-    const stopButton = document.getElementById("stop-scanner-button");
     const status = document.getElementById("scanner-status");
     const form = document.getElementById("barista-scan-form");
     const input = document.getElementById("id_qr_code_uuid");
+    const modal = document.getElementById("barista-celebration-modal");
+    const modalClose = document.getElementById("barista-celebration-close");
 
-    if (!startButton || !stopButton || !status || !form || !input) {
+    const closeModal = () => {
+        if (modal) {
+            modal.hidden = true;
+        }
+    };
+
+    if (modalClose) {
+        modalClose.addEventListener("click", closeModal);
+    }
+    if (modal) {
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+    }
+
+    if (!startButton || !status || !form || !input) {
         return;
     }
 
@@ -138,9 +239,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     startButton.addEventListener("click", startScanner);
-    stopButton.addEventListener("click", () => {
-        stopScanner();
-    });
     window.addEventListener("beforeunload", () => {
         stopScanner();
     });

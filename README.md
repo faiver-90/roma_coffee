@@ -148,6 +148,229 @@ python manage.py createsuperuser
 python manage.py runserver 0.0.0.0:8000
 ```
 
+## Запуск в Docker
+
+Теперь приложение контейнеризировано.
+
+Добавлены файлы:
+- [Dockerfile](/D:/web_develop/roma_coffee/docs/code/roma_coffee/Dockerfile)
+- [entrypoint.sh](/D:/web_develop/roma_coffee/docs/code/roma_coffee/entrypoint.sh)
+- [requirements.txt](/D:/web_develop/roma_coffee/docs/code/roma_coffee/requirements.txt)
+- [.dockerignore](/D:/web_develop/roma_coffee/docs/code/roma_coffee/.dockerignore)
+- обновлен [docker-compose.yml](/D:/web_develop/roma_coffee/docs/code/roma_coffee/docker-compose.yml)
+
+### Что поднимается
+- `db` — PostgreSQL
+- `web` — Django-приложение
+
+### Важная настройка `.env` для Docker
+
+Для контейнера `web` хост БД должен быть не `127.0.0.1`, а имя сервиса `db`.
+
+Пример:
+
+```env
+DJANGO_SECRET_KEY=change-me
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+DJANGO_CSRF_TRUSTED_ORIGINS=
+
+POSTGRES_DB=roma_coffee
+POSTGRES_USER=roma_user
+POSTGRES_PASSWORD=roma_password
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+
+AUTH_COOKIE_SECURE=False
+AUTH_COOKIE_SAMESITE=Lax
+```
+
+### Сборка и запуск
+
+```powershell
+docker compose up --build
+```
+
+Или в фоне:
+
+```powershell
+docker compose up --build -d
+```
+
+### Что делает контейнер `web`
+- ставит Python-зависимости
+- ждет доступности БД через `depends_on`
+- выполняет `python manage.py migrate --noinput`
+- запускает Django на `0.0.0.0:8000`
+
+### Открыть приложение
+
+После запуска:
+
+```text
+http://127.0.0.1:8000
+```
+
+### Полезные команды
+
+Остановить:
+
+```powershell
+docker compose down
+```
+
+Пересобрать:
+
+```powershell
+docker compose up --build
+```
+
+Создать суперпользователя внутри контейнера:
+
+```powershell
+docker compose exec web python manage.py createsuperuser
+```
+
+Запустить команду Django внутри контейнера:
+
+```powershell
+docker compose exec web python manage.py shell
+```
+
+## Production через Docker
+
+Для простой production-схемы добавлен отдельный compose:
+- [docker-compose.prod.yml](/D:/web_develop/roma_coffee/docs/code/roma_coffee/docker-compose.prod.yml)
+- [ .env.prod.example](/D:/web_develop/roma_coffee/docs/code/roma_coffee/.env.prod.example)
+
+Production-вариант теперь построен так:
+- `Caddy` принимает внешний `HTTP/HTTPS`-трафик и сам выпускает SSL
+- `nginx` работает внутри compose как внутренний reverse proxy
+- `gunicorn` запускает Django внутри контейнера `web`
+- `PostgreSQL` работает в отдельном контейнере
+- статика собирается в общий volume и отдается через `nginx`
+
+### Что подготовить на сервере
+
+Нужны:
+- Docker
+- Docker Compose plugin
+- файл `.env.prod`
+
+Создайте `.env.prod` на основе `.env.prod.example`.
+
+Пример:
+
+```env
+DJANGO_SECRET_KEY=very-secret-key
+DJANGO_DEBUG=False
+CADDY_DOMAIN=example.com
+DJANGO_ALLOWED_HOSTS=example.com,www.example.com
+DJANGO_CSRF_TRUSTED_ORIGINS=https://example.com,https://www.example.com
+
+POSTGRES_DB=roma_coffee
+POSTGRES_USER=roma_user
+POSTGRES_PASSWORD=strong-password
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+
+AUTH_COOKIE_SECURE=True
+AUTH_COOKIE_SAMESITE=Lax
+SESSION_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=True
+SECURE_SSL_REDIRECT=False
+SECURE_HSTS_SECONDS=0
+SECURE_HSTS_INCLUDE_SUBDOMAINS=False
+SECURE_HSTS_PRELOAD=False
+```
+
+### Запуск production
+
+На сервере:
+
+```powershell
+docker compose -f docker-compose.prod.yml --env-file .env.prod up --build -d
+```
+
+### Что поднимается
+
+- `caddy` — внешний вход на `80/443`, SSL и reverse proxy
+- `nginx` — внутренний proxy и раздача `/static/`
+- `web` — Django + `gunicorn`
+- `db` — PostgreSQL
+
+### Что делает production-контейнер `web`
+
+При старте контейнер:
+- применяет миграции
+- выполняет `collectstatic`
+- запускает `gunicorn`
+
+Команда:
+
+```text
+gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60
+```
+
+`Caddy` принимает доменный трафик, получает сертификаты Let's Encrypt и проксирует запросы во внутренний `nginx`. `nginx` отдает `/static/` и передает остальное в `web`.
+
+### Полезные production-команды
+
+Логи:
+
+```powershell
+docker compose -f docker-compose.prod.yml logs -f
+```
+
+Остановить:
+
+```powershell
+docker compose -f docker-compose.prod.yml down
+```
+
+Создать суперпользователя:
+
+```powershell
+docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+```
+
+### Что уже включено для production
+
+В `settings.py` добавлены:
+- `STATIC_ROOT`
+- `CompressedManifestStaticFilesStorage`
+- `SECURE_PROXY_SSL_HEADER`
+- `USE_X_FORWARDED_HOST`
+- secure cookie settings через env
+- HSTS/SSL env-настройки
+
+В `docker-compose.prod.yml` добавлены:
+- сервис `caddy`
+- сервис `nginx`
+- общий `static_data` volume
+- внутренний `nginx` без прямого внешнего порта
+- volume для данных и конфигурации `Caddy`
+
+### Как открывать приложение
+
+После старта приложение будет доступно по домену:
+
+```text
+https://YOUR_DOMAIN
+```
+
+Важно:
+- домен должен смотреть на IP сервера
+- порты `80` и `443` должны быть открыты
+- `CADDY_DOMAIN` в `.env.prod` должен совпадать с доменом
+- `DJANGO_ALLOWED_HOSTS` и `DJANGO_CSRF_TRUSTED_ORIGINS` тоже должны совпадать с этим доменом
+
+### Что рекомендую следующим шагом
+
+Для реального production лучше позже добавить:
+- резервные копии БД
+- мониторинг логов и healthcheck приложения
+
 ## Админка
 
 Админка доступна по:

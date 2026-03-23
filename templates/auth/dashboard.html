@@ -1,43 +1,174 @@
 {% extends "auth/layout.html" %}
 {% block title %}Личный кабинет | Roma Coffee{% endblock %}
+{% block extra_head %}
+{{ block.super }}
+<style>
+    .dashboard-center {
+        justify-items: center;
+        text-align: center;
+    }
+
+    .dashboard-center .field-label {
+        text-align: center;
+    }
+
+    .dashboard-center .field-help {
+        text-align: center;
+    }
+
+    .dashboard-action-center {
+        display: grid;
+        justify-items: center;
+    }
+
+    .celebration-modal[hidden] {
+        display: none;
+    }
+
+    .celebration-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: rgba(47, 31, 23, 0.46);
+        backdrop-filter: blur(6px);
+    }
+
+    .celebration-card {
+        width: min(100%, 460px);
+        padding: 28px;
+        border-radius: 28px;
+        color: #2f1f17;
+        box-shadow: 0 28px 80px rgba(47, 31, 23, 0.25);
+        background: linear-gradient(160deg, #fff8eb, #f5dfb5);
+    }
+
+    .celebration-card[data-accent="gold"] {
+        background: linear-gradient(160deg, #fff2c9, #f0bf53);
+    }
+
+    .celebration-card[data-accent="cream"] {
+        background: linear-gradient(160deg, #fffaf1, #f3dec0);
+    }
+
+    .celebration-card h3 {
+        margin: 0 0 12px;
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    .celebration-card p {
+        margin: 0 0 22px;
+        color: rgba(47, 31, 23, 0.88);
+        line-height: 1.6;
+    }
+</style>
+{% endblock %}
 {% block auth_content %}
 <h2>{{ heading }}</h2>
 <p>{{ description }}</p>
 
-<div class="stack"{% if live_updates_enabled %} data-state-url="{{ state_url }}"{% endif %}>
+<div class="stack"{% if live_updates_enabled %} data-state-url="{{ state_url }}"{% endif %} data-qr-refresh-url="{{ qr_refresh_url }}">
     {% for card in cards %}
     <div class="field" data-card-key="{{ card.key }}">
         <span class="field-label">{{ card.label }}</span>
         <div class="field-help" data-card-value="{{ card.key }}">{{ card.value }}</div>
     </div>
     {% endfor %}
+
     {% if qr_code_image %}
-    <div class="field">
+    <div class="field dashboard-center" id="qr-code-block">
         <span class="field-label">QR-код</span>
         <div class="field-help">
-            <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR code" width="220" height="220">
+            <img id="qr-code-image" src="data:image/png;base64,{{ qr_code_image }}" alt="QR code" width="220" height="220">
+        </div>
+    </div>
+    {% else %}
+    <div class="field dashboard-center" id="qr-code-block" hidden>
+        <span class="field-label">QR-код</span>
+        <div class="field-help">
+            <img id="qr-code-image" alt="QR code" width="220" height="220">
         </div>
     </div>
     {% endif %}
+
     {% for link in links %}
     <a class="button button-secondary" href="{{ link.url }}">{{ link.label }}</a>
     {% endfor %}
+
+    <button class="button" type="button" id="refresh-qr-button">Создать или обновить QR-код</button>
+
     {% for action in actions %}
-    <form method="{{ action.method }}" action="{{ action.url }}">
+        {% if action.label != 'Создать или обновить QR-код' %}
+    <form class="{% if action.label == 'Выйти' %}dashboard-action-center{% endif %}" method="{{ action.method }}" action="{{ action.url }}">
         {% csrf_token %}
         {% include "components/button.html" with label=action.label %}
     </form>
+        {% endif %}
     {% endfor %}
 </div>
-{% if live_updates_enabled %}
+
+<div class="celebration-modal" id="celebration-modal"{% if not celebration_modal %} hidden{% endif %}>
+    <div class="celebration-card" id="celebration-card" data-accent="{% if celebration_modal %}{{ celebration_modal.accent }}{% else %}gold{% endif %}">
+        <h3 id="celebration-title">{% if celebration_modal %}{{ celebration_modal.title }}{% else %}Праздник{% endif %}</h3>
+        <p id="celebration-message">{% if celebration_modal %}{{ celebration_modal.message }}{% endif %}</p>
+        <button class="button" type="button" id="celebration-close">Продолжить</button>
+    </div>
+</div>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const container = document.querySelector("[data-state-url]");
+    const container = document.querySelector("[data-qr-refresh-url]");
+    const refreshQrButton = document.getElementById("refresh-qr-button");
+    const qrCodeBlock = document.getElementById("qr-code-block");
+    const qrCodeImage = document.getElementById("qr-code-image");
+    const csrfToken = document.querySelector("input[name='csrfmiddlewaretoken']")?.value;
+    const modal = document.getElementById("celebration-modal");
+    const modalCard = document.getElementById("celebration-card");
+    const modalTitle = document.getElementById("celebration-title");
+    const modalMessage = document.getElementById("celebration-message");
+    const modalClose = document.getElementById("celebration-close");
+    const seenModalKey = "dashboard_seen_celebration_modal";
+    const initialTitle = modalTitle?.textContent?.trim() || "";
+    const initialMessage = modalMessage?.textContent?.trim() || "";
+    let lastModalSignature = initialTitle && initialMessage ? `${initialTitle}::${initialMessage}` : "";
+
     if (!container) {
         return;
     }
 
     const stateUrl = container.dataset.stateUrl;
+    const qrRefreshUrl = container.dataset.qrRefreshUrl;
+
+    const getSeenSignature = () => window.sessionStorage.getItem(seenModalKey) || "";
+    const setSeenSignature = (signature) => window.sessionStorage.setItem(seenModalKey, signature);
+
+    const closeModal = () => {
+        if (modal) {
+            modal.hidden = true;
+        }
+        if (lastModalSignature) {
+            setSeenSignature(lastModalSignature);
+        }
+    };
+
+    const openModal = (payload) => {
+        if (!modal || !modalCard || !modalTitle || !modalMessage || !payload) {
+            return;
+        }
+        modalTitle.textContent = payload.title;
+        modalMessage.textContent = payload.message;
+        modalCard.dataset.accent = payload.accent || "gold";
+        lastModalSignature = `${payload.title}::${payload.message}`;
+        if (getSeenSignature() === lastModalSignature) {
+            modal.hidden = true;
+            return;
+        }
+        modal.hidden = false;
+    };
+
     const updateCard = (key, value) => {
         const element = document.querySelector(`[data-card-value="${key}"]`);
         if (element) {
@@ -46,6 +177,9 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const refreshState = async () => {
+        if (!stateUrl) {
+            return;
+        }
         try {
             const response = await fetch(stateUrl, {
                 method: "GET",
@@ -58,15 +192,70 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
             const data = await response.json();
-            Object.entries(data).forEach(([key, value]) => updateCard(key, value));
+            const { celebration_modal: celebrationModal, ...cardData } = data;
+            Object.entries(cardData).forEach(([key, value]) => updateCard(key, value));
+            if (celebrationModal) {
+                const nextSignature = `${celebrationModal.title}::${celebrationModal.message}`;
+                if (nextSignature !== lastModalSignature) {
+                    openModal(celebrationModal);
+                }
+            }
         } catch (error) {
             console.error(error);
         }
     };
 
+    const refreshQrCode = async () => {
+        if (!qrRefreshUrl || !csrfToken) {
+            return;
+        }
+        refreshQrButton.disabled = true;
+        try {
+            const response = await fetch(qrRefreshUrl, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "X-CSRFToken": csrfToken,
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            });
+            if (!response.ok) {
+                return;
+            }
+            const data = await response.json();
+            updateCard("qr_code_uuid", data.qr_code_uuid);
+            if (qrCodeBlock && qrCodeImage) {
+                qrCodeImage.src = `data:image/png;base64,${data.qr_code_image}`;
+                qrCodeBlock.hidden = false;
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            refreshQrButton.disabled = false;
+        }
+    };
+
+    if (modalClose) {
+        modalClose.addEventListener("click", closeModal);
+    }
+    if (modal) {
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+    }
+    if (lastModalSignature && getSeenSignature() === lastModalSignature) {
+        modal.hidden = true;
+    }
+    if (refreshQrButton) {
+        refreshQrButton.addEventListener("click", refreshQrCode);
+    }
+
     refreshState();
-    window.setInterval(refreshState, 4000);
+    if (stateUrl) {
+        window.setInterval(refreshState, 4000);
+    }
 });
 </script>
-{% endif %}
 {% endblock %}

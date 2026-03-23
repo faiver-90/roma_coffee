@@ -9,8 +9,7 @@ from .api import (
     RefreshApiView,
     RegisterApiView,
 )
-from .views import BaristaDashboardView, DashboardView, LoginView, LogoutView, PasswordResetView, RegisterView
-from .views import DashboardStateView
+from .views import BaristaDashboardView, DashboardQrRefreshView, DashboardStateView, DashboardView, LoginView, LogoutView, PasswordResetView, RegisterView
 
 app_name = 'users'
 
@@ -18,6 +17,7 @@ urlpatterns = [
     path('barista/', BaristaDashboardView.as_view(), name='barista_dashboard'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('dashboard/state/', DashboardStateView.as_view(), name='dashboard_state'),
+    path('dashboard/qr/', DashboardQrRefreshView.as_view(), name='dashboard_qr_refresh'),
     path('login/', LoginView.as_view(), name='login'),
     path('register/', RegisterView.as_view(), name='register'),
     path('logout/', LogoutView.as_view(), name='logout'),
