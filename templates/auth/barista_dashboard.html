@@ -1,11 +1,45 @@
 {% extends "auth/layout.html" %}
 {% block title %}Кабинет баристы | Roma Coffee{% endblock %}
+{% block extra_head %}
+{{ block.super }}
+<style>
+    .scanner-panel {
+        display: grid;
+        gap: 12px;
+        padding: 18px;
+        border: 1px solid rgba(87, 53, 31, 0.14);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.56);
+    }
+
+    .scanner-box {
+        overflow: hidden;
+        border-radius: 20px;
+        background: rgba(47, 31, 23, 0.08);
+    }
+
+    .scanner-status {
+        color: var(--muted);
+        font-size: 0.92rem;
+    }
+</style>
+{% endblock %}
 {% block auth_content %}
 <h2>Кабинет баристы</h2>
-<p>Отмечайте кофе по UUID из QR-кода клиента.</p>
+<p>Сканируйте QR-код клиента камерой или вставляйте UUID вручную.</p>
 
 <div class="stack">
-    <form method="post" class="auth-form">
+    <div class="scanner-panel">
+        <div class="scanner-box" id="qr-reader"></div>
+        <div class="button-row">
+            <a class="button button-secondary" href="{% url 'users:dashboard' %}">В кабинет</a>
+            <button class="button" type="button" id="start-scanner-button">Запустить сканер</button>
+            <button class="button button-secondary" type="button" id="stop-scanner-button">Остановить</button>
+        </div>
+        <div class="scanner-status" id="scanner-status">Сканер еще не запущен.</div>
+    </div>
+
+    <form method="post" class="auth-form" id="barista-scan-form">
         {% csrf_token %}
         {% include "components/form_errors.html" with form=form %}
         {% include "components/input.html" with field=form.qr_code_uuid %}
@@ -27,4 +61,89 @@
     </div>
     {% endif %}
 </div>
+
+<script src="https://unpkg.com/html5-qrcode" defer></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const startButton = document.getElementById("start-scanner-button");
+    const stopButton = document.getElementById("stop-scanner-button");
+    const status = document.getElementById("scanner-status");
+    const form = document.getElementById("barista-scan-form");
+    const input = document.getElementById("id_qr_code_uuid");
+
+    if (!startButton || !stopButton || !status || !form || !input) {
+        return;
+    }
+
+    let scanner = null;
+    let scannerRunning = false;
+
+    const setStatus = (message) => {
+        status.textContent = message;
+    };
+
+    const stopScanner = async () => {
+        if (!scanner || !scannerRunning) {
+            setStatus("Сканер остановлен.");
+            return;
+        }
+
+        try {
+            await scanner.stop();
+            await scanner.clear();
+        } catch (error) {
+            console.error(error);
+        }
+
+        scannerRunning = false;
+        setStatus("Сканер остановлен.");
+    };
+
+    const handleSuccess = async (decodedText) => {
+        input.value = decodedText.trim();
+        setStatus("QR-код считан. Отправляю отметку...");
+        await stopScanner();
+        form.submit();
+    };
+
+    const startScanner = async () => {
+        if (typeof Html5Qrcode === "undefined") {
+            setStatus("Не удалось загрузить библиотеку сканера. Проверьте интернет на телефоне.");
+            return;
+        }
+
+        if (scannerRunning) {
+            setStatus("Сканер уже запущен.");
+            return;
+        }
+
+        try {
+            scanner = new Html5Qrcode("qr-reader");
+            await scanner.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 220, height: 220 },
+                    aspectRatio: 1,
+                },
+                handleSuccess,
+                () => {}
+            );
+            scannerRunning = true;
+            setStatus("Сканер запущен. Наведите камеру на QR-код.");
+        } catch (error) {
+            console.error(error);
+            setStatus("Не удалось запустить камеру. Проверьте разрешение браузера и HTTPS.");
+        }
+    };
+
+    startButton.addEventListener("click", startScanner);
+    stopButton.addEventListener("click", () => {
+        stopScanner();
+    });
+    window.addEventListener("beforeunload", () => {
+        stopScanner();
+    });
+});
+</script>
 {% endblock %}

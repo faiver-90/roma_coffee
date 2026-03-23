@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.urls import reverse
 from django.shortcuts import redirect, render
 from django.views import View
@@ -144,12 +144,34 @@ class DashboardView(AuthenticatedTemplateView):
         return redirect('users:dashboard')
 
 
+class DashboardStateView(AuthenticatedTemplateView):
+    def get(self, request: HttpRequest) -> HttpResponse:
+        if self.auth_user.is_barista:
+            return JsonResponse(
+                {
+                    'role': self.auth_user.get_role_display(),
+                    'phone': self.auth_user.phone,
+                }
+            )
+
+        context = build_customer_dashboard_view_model(
+            self.auth_user,
+            qr_code_image=None,
+            dashboard_url=reverse('users:dashboard'),
+            logout_url=reverse('users:logout'),
+        )
+        card_map = {card.key: card.value for card in context['cards']}
+        return JsonResponse(card_map)
+
+
 class BaristaDashboardView(RoleRequiredView):
     required_role = UserRole.BARISTA
     template_name = 'auth/barista_dashboard.html'
+    session_key = 'barista_scan_result'
 
     def get(self, request: HttpRequest) -> HttpResponse:
-        return render(request, self.template_name, {'form': BaristaScanForm(), 'scan_result': None})
+        scan_result = request.session.pop(self.session_key, None)
+        return render(request, self.template_name, {'form': BaristaScanForm(), 'scan_result': scan_result})
 
     def post(self, request: HttpRequest) -> HttpResponse:
         form = BaristaScanForm(request.POST)
@@ -163,11 +185,8 @@ class BaristaDashboardView(RoleRequiredView):
 
         loyalty_state = scan_customer_loyalty(customer)
         messages.success(request, loyalty_state.barista_message)
-        context = {
-            'form': BaristaScanForm(),
-            'scan_result': build_scan_result_view_model(customer, loyalty_state),
-        }
-        return render(request, self.template_name, context)
+        request.session[self.session_key] = build_scan_result_view_model(customer, loyalty_state)
+        return redirect('users:barista_dashboard')
 
 
 class PasswordResetView(View):

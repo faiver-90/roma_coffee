@@ -4,11 +4,11 @@
 <h2>{{ heading }}</h2>
 <p>{{ description }}</p>
 
-<div class="stack">
+<div class="stack"{% if live_updates_enabled %} data-state-url="{{ state_url }}"{% endif %}>
     {% for card in cards %}
-    <div class="field">
+    <div class="field" data-card-key="{{ card.key }}">
         <span class="field-label">{{ card.label }}</span>
-        <div class="field-help">{{ card.value }}</div>
+        <div class="field-help" data-card-value="{{ card.key }}">{{ card.value }}</div>
     </div>
     {% endfor %}
     {% if qr_code_image %}
@@ -29,4 +29,44 @@
     </form>
     {% endfor %}
 </div>
+{% if live_updates_enabled %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const container = document.querySelector("[data-state-url]");
+    if (!container) {
+        return;
+    }
+
+    const stateUrl = container.dataset.stateUrl;
+    const updateCard = (key, value) => {
+        const element = document.querySelector(`[data-card-value="${key}"]`);
+        if (element) {
+            element.textContent = value;
+        }
+    };
+
+    const refreshState = async () => {
+        try {
+            const response = await fetch(stateUrl, {
+                method: "GET",
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            });
+            if (!response.ok) {
+                return;
+            }
+            const data = await response.json();
+            Object.entries(data).forEach(([key, value]) => updateCard(key, value));
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    refreshState();
+    window.setInterval(refreshState, 4000);
+});
+</script>
+{% endif %}
 {% endblock %}

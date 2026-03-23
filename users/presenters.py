@@ -5,6 +5,7 @@ from .domain.loyalty import LoyaltyProgram
 
 @dataclass(frozen=True)
 class DashboardCard:
+    key: str
     label: str
     value: str
 
@@ -19,11 +20,11 @@ class DashboardAction:
 def build_customer_dashboard_view_model(user, *, qr_code_image: str | None, dashboard_url: str, logout_url: str) -> dict:
     program = LoyaltyProgram()
     cards = [
-        DashboardCard(label='Роль', value=user.get_role_display()),
-        DashboardCard(label='Телефон', value=user.phone),
-        DashboardCard(label='Кофе по акции', value=program.render_progress(user.coffee_count)),
-        DashboardCard(label='Статус акции', value=user.loyalty_status_text),
-        DashboardCard(label='UUID для QR', value=str(user.qr_code_uuid) if user.qr_code_uuid else 'QR-код еще не создан.'),
+        DashboardCard(key='role', label='Роль', value=user.get_role_display()),
+        DashboardCard(key='phone', label='Телефон', value=user.phone),
+        DashboardCard(key='coffee_count', label='Кофе по акции', value=program.render_progress(user.coffee_count)),
+        DashboardCard(key='loyalty_status', label='Статус акции', value=user.loyalty_status_text),
+        DashboardCard(key='qr_code_uuid', label='UUID для QR', value=str(user.qr_code_uuid) if user.qr_code_uuid else 'QR-код еще не создан.'),
     ]
     actions = [
         DashboardAction(label='Создать или обновить QR-код', method='post', url=dashboard_url),
@@ -36,13 +37,15 @@ def build_customer_dashboard_view_model(user, *, qr_code_image: str | None, dash
         'actions': actions,
         'links': [],
         'qr_code_image': qr_code_image,
+        'state_url': '/auth/dashboard/state/',
+        'live_updates_enabled': True,
     }
 
 
 def build_barista_dashboard_view_model(user, *, barista_url: str, logout_url: str) -> dict:
     cards = [
-        DashboardCard(label='Роль', value=user.get_role_display()),
-        DashboardCard(label='Телефон', value=user.phone),
+        DashboardCard(key='role', label='Роль', value=user.get_role_display()),
+        DashboardCard(key='phone', label='Телефон', value=user.phone),
     ]
     actions = [
         DashboardAction(label='Выйти', method='post', url=logout_url),
@@ -57,6 +60,8 @@ def build_barista_dashboard_view_model(user, *, barista_url: str, logout_url: st
         'actions': actions,
         'links': links,
         'qr_code_image': None,
+        'state_url': '',
+        'live_updates_enabled': False,
     }
 
 
