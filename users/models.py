@@ -40,6 +40,8 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField(max_length=32, unique=True)
+    qr_code_uuid = models.UUIDField(unique=True, null=True, blank=True)
+    qr_code_updated_at = models.DateTimeField(null=True, blank=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)

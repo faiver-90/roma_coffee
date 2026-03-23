@@ -1,6 +1,10 @@
+import base64
+import io
+import uuid
 from datetime import datetime, timezone as dt_timezone
 
 from django.utils import timezone
+import qrcode
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from .models import PasswordResetCode, RefreshSession, User
@@ -56,3 +60,25 @@ def issue_password_reset_code(phone: str):
     PasswordResetCode.objects.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
     reset_record, code = PasswordResetCode.issue_for_user(user)
     return {'user': user, 'record': reset_record, 'code': code}
+
+
+def regenerate_user_qr_code(user: User) -> User:
+    user.qr_code_uuid = uuid.uuid4()
+    user.qr_code_updated_at = timezone.now()
+    user.save(update_fields=['qr_code_uuid', 'qr_code_updated_at'])
+    return user
+
+
+def build_qr_code_image_base64(value: str) -> str:
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=2,
+    )
+    qr.add_data(value)
+    qr.make(fit=True)
+
+    image = qr.make_image(fill_color='black', back_color='white')
+    buffer = io.BytesIO()
+    image.save(buffer, format='PNG')
+    return base64.b64encode(buffer.getvalue()).decode('ascii')

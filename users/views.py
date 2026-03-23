@@ -10,7 +10,13 @@ from .api import clear_auth_cookies, set_auth_cookies
 from .authentication import get_user_from_access_cookie
 from .forms import LoginForm, PasswordResetConfirmForm, PasswordResetRequestForm, RegisterForm
 from .models import User
-from .services import issue_password_reset_code, issue_tokens_for_user, revoke_refresh_token
+from .services import (
+    build_qr_code_image_base64,
+    issue_password_reset_code,
+    issue_tokens_for_user,
+    regenerate_user_qr_code,
+    revoke_refresh_token,
+)
 
 
 class AuthenticatedTemplateView(View):
@@ -87,7 +93,16 @@ class DashboardView(AuthenticatedTemplateView):
     template_name = 'auth/dashboard.html'
 
     def get(self, request: HttpRequest) -> HttpResponse:
-        return render(request, self.template_name, {'auth_user': self.auth_user})
+        context = {'auth_user': self.auth_user}
+        if self.auth_user.qr_code_uuid:
+            context['qr_code_value'] = str(self.auth_user.qr_code_uuid)
+            context['qr_code_image'] = build_qr_code_image_base64(context['qr_code_value'])
+        return render(request, self.template_name, context)
+
+    def post(self, request: HttpRequest) -> HttpResponse:
+        regenerate_user_qr_code(self.auth_user)
+        messages.success(request, 'QR-код обновлен.')
+        return redirect('users:dashboard')
 
 
 class PasswordResetView(View):

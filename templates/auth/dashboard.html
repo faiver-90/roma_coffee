@@ -1,18 +1,39 @@
-{% extends "auth/layout.html" %} 
-{% block title %} Личный кабинет | Roma Coffee {% endblock %}
-
+{% extends "auth/layout.html" %}
+{% block title %}Личный кабинет | Roma Coffee{% endblock %}
 {% block auth_content %}
 <h2>Личный кабинет</h2>
+<p>Здесь можно выпускать и перевыпускать персональный QR-код пользователя.</p>
 
 <div class="stack">
     <div class="field">
         <span class="field-label">Телефон</span>
         <div class="field-help">{{ auth_user.phone }}</div>
     </div>
+    <div class="field">
+        <span class="field-label">UUID для QR</span>
+        <div class="field-help">
+            {% if auth_user.qr_code_uuid %}
+                {{ auth_user.qr_code_uuid }}
+            {% else %}
+                QR-код еще не создан.
+            {% endif %}
+        </div>
+    </div>
+    {% if qr_code_image %}
+    <div class="field">
+        <span class="field-label">QR-код</span>
+        <div class="field-help">
+            <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR code" width="220" height="220">
+        </div>
+    </div>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        {% include "components/button.html" with label="Создать или обновить QR-код" %}
+    </form>
     <form method="post" action="{% url 'users:logout' %}">
         {% csrf_token %}
         {% include "components/button.html" with label="Выйти" %}
     </form>
 </div>
-
 {% endblock %}
