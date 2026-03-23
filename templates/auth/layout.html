@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+    <style>
+        .auth-grid {
+            display: grid;
+            gap: 28px;
+            align-items: stretch;
+            grid-template-columns: minmax(0, 1.2fr) minmax(320px, 460px);
+        }
+
+        .auth-aside {
+            padding: 36px;
+            border-radius: 32px;
+            background:
+                linear-gradient(160deg, rgba(123, 63, 29, 0.95), rgba(63, 33, 21, 0.88)),
+                #5f2f13;
+            color: #fff7f0;
+            box-shadow: var(--shadow);
+        }
+
+        .auth-aside h1 {
+            margin: 0 0 16px;
+            font-size: clamp(2.4rem, 4vw, 4.6rem);
+            line-height: 0.95;
+            letter-spacing: -0.03em;
+        }
+
+        .auth-aside p {
+            margin: 0;
+            max-width: 36rem;
+            color: rgba(255, 247, 240, 0.82);
+            line-height: 1.6;
+        }
+
+        .auth-card {
+            padding: 30px;
+            border-radius: 28px;
+            background: var(--surface);
+            border: 1px solid var(--surface-border);
+            box-shadow: var(--shadow);
+        }
+
+        .auth-card h2 {
+            margin: 0 0 10px;
+            font-size: 2rem;
+        }
+
+        .auth-card p {
+            margin: 0 0 24px;
+            color: var(--muted);
+        }
+
+        .auth-form {
+            display: grid;
+            gap: 16px;
+        }
+
+        .field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .field-label {
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+
+        .field input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(87, 53, 31, 0.18);
+            background: rgba(255, 255, 255, 0.84);
+            color: var(--text);
+            font: inherit;
+        }
+
+        .field input:focus {
+            outline: 2px solid rgba(123, 63, 29, 0.18);
+            border-color: rgba(123, 63, 29, 0.45);
+        }
+
+        .field-errors {
+            display: grid;
+            gap: 4px;
+            color: var(--danger);
+            font-size: 0.92rem;
+        }
+
+        .field-help {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 6px;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+            padding: 0 18px;
+            border: 0;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #fff;
+            text-decoration: none;
+            font: inherit;
+            cursor: pointer;
+            transition: transform 0.18s ease, background-color 0.18s ease;
+        }
+
+        .button:hover {
+            transform: translateY(-1px);
+            background: var(--accent-strong);
+        }
+
+        .button-secondary {
+            background: rgba(123, 63, 29, 0.1);
+            color: var(--accent-strong);
+        }
+
+        .auth-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .auth-links a {
+            color: var(--accent-strong);
+        }
+
+        .stack {
+            display: grid;
+            gap: 18px;
+        }
+
+        @media (max-width: 920px) {
+            .auth-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .auth-aside {
+                padding: 28px;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="auth-grid">
+        <section class="auth-aside">
+            <h1>Roma<br>Coffee</h1>
+            <p>{% block aside_text %}{% endblock %}</p>
+        </section>
+        <section class="auth-card">
+            {% block auth_content %}{% endblock %}
+        </section>
+    </div>
+{% endblock %}

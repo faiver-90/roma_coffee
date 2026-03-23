@@ -1,0 +1,5 @@
+{% if href %}
+    <a class="button {% if variant %}button-{{ variant }}{% endif %}" href="{{ href }}">{{ label }}</a>
+{% else %}
+    <button class="button {% if variant %}button-{{ variant }}{% endif %}" type="{{ type|default:'submit' }}">{{ label }}</button>
+{% endif %}

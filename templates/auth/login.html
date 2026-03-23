@@ -1,0 +1,18 @@
+{% extends "auth/layout.html" %} {% block title %} Вход | Roma Coffee {% endblock %}
+{% block auth_content %}
+<h2>Войти</h2>
+<p>Используйте телефон как логин.</p>
+<form method="post" class="auth-form">
+    {% csrf_token %} {% include "components/form_errors.html" with form=form %}
+    {% include "components/input.html" with field=form.phone %}
+   
+    {% include "components/input.html" with field=form.password %}
+    <div class="button-row">
+        {% url "users:register" as register_url %} {% include "components/button.html" with label="Войти" %}
+        {% include "components/button.html" with href=register_url label="Зарегистрироваться" variant="secondary" %}
+    </div>
+</form>
+<div class="auth-links">
+    <a href="{% url 'users:password_reset' %}">Восстановить пароль</a>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+version: "3"
+
+vars:
+  PYTHON_CMD: uv run
+
+tasks:
+  run:
+    desc: Запуск приложения в режиме разработки с авто-перезагрузкой
+    dotenv:
+      - .env
+    cmds:
+      - "{{.PYTHON_CMD}} uvicorn app.main:app --reload"
+
+  test:
+    desc: Запуск тестов с разной конфигурацией в зависимости от DATABASE_URL
+    cmds:
+      - |
+        if [ -n "$DATABASE_URL" ]; then
+          {{.PYTHON_CMD}} pytest tests/ -v
+        else
+          {{.PYTHON_CMD}} pytest tests/ -v -n 2
+        fi
+
+  migrate:
+    desc: Применение миграций базы данных до последней версии
+    dotenv:
+      - .env
+    cmds:
+      - "{{.PYTHON_CMD}} alembic upgrade head"
+
+  migration:
+    desc: Создать новую миграцию (autogenerate) с комментарием
+    dotenv:
+      - .env
+    vars:
+      MSG: "{{.CLI_ARGS}}"
+    preconditions:
+      - sh: 'test -n "{{.MSG}}"'
+        msg: 'Ошибка: Не указан комментарий. Использование: task migration -- "комментарий"'
+    cmds:
+      - '{{.PYTHON_CMD}} alembic revision --autogenerate -m "{{.MSG}}"'
+
+  lint:
+    desc: Проверка кода линтером с автоматическим исправлением
+    cmds:
+      - "{{.PYTHON_CMD}} ruff check --fix ."
+
+  format:
+    desc: Форматирование кода с помощью ruff formatter
+    cmds:
+      - "{{.PYTHON_CMD}} ruff format ."
+
+  typecheck:
+    desc: Проверка типов с использованием basedpyright
+    cmds:
+      - "{{.PYTHON_CMD}} basedpyright"
+
+  fmt-test:
+    desc: Комплексная проверка - форматирование + линтинг + проверка типов + тесты
+    deps: [format, lint, typecheck, test]
+
+  default:
+    desc: Показывает все доступные задачи
+    cmds:
+      - task --list-all
+
+  commit:
+    desc: "Format with Ruff, commit with message, and push"
+    vars:
+      MSG: "{{.CLI_ARGS}}"
+    preconditions:
+      - sh: 'test -n "{{.MSG}}"'
+        msg: 'Ошибка: Не указан комментарий. Использование: task commit -- "комментарий"'
+    cmds:
+      #- "uv run ruff format ."
+      #- "uv run ruff check . --fix"
+      #- "uv run basedpyright"
+      - "git add ."
+      - 'git commit -m "{{.MSG}}" --no-verify'
+      - 'echo "Коммит успешно выполнен и отправлен."'

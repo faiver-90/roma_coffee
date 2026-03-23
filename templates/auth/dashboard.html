@@ -1,0 +1,18 @@
+{% extends "auth/layout.html" %} 
+{% block title %} Личный кабинет | Roma Coffee {% endblock %}
+
+{% block auth_content %}
+<h2>Личный кабинет</h2>
+
+<div class="stack">
+    <div class="field">
+        <span class="field-label">Телефон</span>
+        <div class="field-help">{{ auth_user.phone }}</div>
+    </div>
+    <form method="post" action="{% url 'users:logout' %}">
+        {% csrf_token %}
+        {% include "components/button.html" with label="Выйти" %}
+    </form>
+</div>
+
+{% endblock %}

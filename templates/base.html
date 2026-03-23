@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Roma Coffee{% endblock %}</title>
+    <style>
+        :root {
+            --bg: #f7f1e8;
+            --surface: rgba(255, 252, 247, 0.95);
+            --surface-border: rgba(87, 53, 31, 0.14);
+            --text: #2f1f17;
+            --muted: #7a6052;
+            --accent: #7b3f1d;
+            --accent-strong: #5f2f13;
+            --danger: #b33a3a;
+            --shadow: 0 24px 60px rgba(76, 45, 25, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(181, 126, 73, 0.22), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(123, 63, 29, 0.18), transparent 32%),
+                linear-gradient(135deg, #f4ede2 0%, #efe1d0 100%);
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .page-shell {
+            width: min(100%, 1120px);
+            margin: 0 auto;
+            padding: 32px 20px 48px;
+        }
+
+        .flash-list {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .flash {
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: var(--surface);
+            border: 1px solid var(--surface-border);
+            box-shadow: var(--shadow);
+        }
+
+        .flash.error {
+            color: var(--danger);
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="page-shell">
+        {% if messages %}
+            <div class="flash-list">
+                {% for message in messages %}
+                    <div class="flash {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

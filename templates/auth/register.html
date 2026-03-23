@@ -1,0 +1,19 @@
+{% extends "auth/layout.html" %} 
+{% block title %} Регистрация | Roma Coffee {% endblock %}
+
+{% block auth_content %}
+
+<h2>Регистрация</h2>
+<p>Создайте аккаунт по номеру телефона.</p>
+<form method="post" class="auth-form">
+    {% csrf_token %} {% include "components/form_errors.html" with form=form %}
+    {% include "components/input.html" with field=form.phone %} 
+    {% include "components/input.html" with field=form.password1 %}
+    {% include "components/input.html" with field=form.password2 %}
+    <div class="button-row">
+        {% url "users:login" as login_url %} 
+        {% include "components/button.html" with label="Создать аккаунт" %} 
+        {% include "components/button.html" with href=login_url label="Назад ко входу" variant="secondary" %}
+    </div>
+</form>
+{% endblock %}
