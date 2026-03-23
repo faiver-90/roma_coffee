@@ -1,0 +1,30 @@
+{% extends "auth/layout.html" %}
+{% block title %}Кабинет баристы | Roma Coffee{% endblock %}
+{% block auth_content %}
+<h2>Кабинет баристы</h2>
+<p>Отмечайте кофе по UUID из QR-кода клиента.</p>
+
+<div class="stack">
+    <form method="post" class="auth-form">
+        {% csrf_token %}
+        {% include "components/form_errors.html" with form=form %}
+        {% include "components/input.html" with field=form.qr_code_uuid %}
+        {% include "components/button.html" with label="Отметить кофе" %}
+    </form>
+
+    {% if scan_result %}
+    <div class="field">
+        <span class="field-label">Пользователь</span>
+        <div class="field-help">{{ scan_result.customer_phone }}</div>
+    </div>
+    <div class="field">
+        <span class="field-label">Прогресс</span>
+        <div class="field-help">{{ scan_result.progress }}</div>
+    </div>
+    <div class="field">
+        <span class="field-label">Действие</span>
+        <div class="field-help">{{ scan_result.barista_message }}</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

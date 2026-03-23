@@ -7,6 +7,9 @@ from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 from django.utils import timezone
 
+from .domain.loyalty import LoyaltyProgram, LoyaltyStatus
+from .domain.roles import UserRole
+
 
 class UserManager(BaseUserManager):
     use_in_migrations = True
@@ -39,6 +42,10 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    role = models.CharField(max_length=16, choices=UserRole.choices, default=UserRole.CUSTOMER)
+    coffee_count = models.PositiveSmallIntegerField(default=0)
+    free_coffee_available = models.BooleanField(default=False)
+    loyalty_status = models.CharField(max_length=32, default=LoyaltyStatus.COLLECTING)
     phone = models.CharField(max_length=32, unique=True)
     qr_code_uuid = models.UUIDField(unique=True, null=True, blank=True)
     qr_code_updated_at = models.DateTimeField(null=True, blank=True)
@@ -56,6 +63,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self) -> str:
         return self.phone
+
+    @property
+    def is_barista(self) -> bool:
+        return self.role == UserRole.BARISTA
+
+    @property
+    def loyalty_status_text(self) -> str:
+        program = LoyaltyProgram()
+        return program.message_for_status(LoyaltyStatus(self.loyalty_status))
 
 
 class RefreshSession(models.Model):

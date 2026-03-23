@@ -1,24 +1,16 @@
 {% extends "auth/layout.html" %}
 {% block title %}Личный кабинет | Roma Coffee{% endblock %}
 {% block auth_content %}
-<h2>Личный кабинет</h2>
-<p>Здесь можно выпускать и перевыпускать персональный QR-код пользователя.</p>
+<h2>{{ heading }}</h2>
+<p>{{ description }}</p>
 
 <div class="stack">
+    {% for card in cards %}
     <div class="field">
-        <span class="field-label">Телефон</span>
-        <div class="field-help">{{ auth_user.phone }}</div>
+        <span class="field-label">{{ card.label }}</span>
+        <div class="field-help">{{ card.value }}</div>
     </div>
-    <div class="field">
-        <span class="field-label">UUID для QR</span>
-        <div class="field-help">
-            {% if auth_user.qr_code_uuid %}
-                {{ auth_user.qr_code_uuid }}
-            {% else %}
-                QR-код еще не создан.
-            {% endif %}
-        </div>
-    </div>
+    {% endfor %}
     {% if qr_code_image %}
     <div class="field">
         <span class="field-label">QR-код</span>
@@ -27,13 +19,14 @@
         </div>
     </div>
     {% endif %}
-    <form method="post">
+    {% for link in links %}
+    <a class="button button-secondary" href="{{ link.url }}">{{ link.label }}</a>
+    {% endfor %}
+    {% for action in actions %}
+    <form method="{{ action.method }}" action="{{ action.url }}">
         {% csrf_token %}
-        {% include "components/button.html" with label="Создать или обновить QR-код" %}
+        {% include "components/button.html" with label=action.label %}
     </form>
-    <form method="post" action="{% url 'users:logout' %}">
-        {% csrf_token %}
-        {% include "components/button.html" with label="Выйти" %}
-    </form>
+    {% endfor %}
 </div>
 {% endblock %}

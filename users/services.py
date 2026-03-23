@@ -7,6 +7,8 @@ from django.utils import timezone
 import qrcode
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
+from .domain.loyalty import LoyaltyService
+from .domain.roles import UserRole
 from .models import PasswordResetCode, RefreshSession, User
 
 
@@ -82,3 +84,20 @@ def build_qr_code_image_base64(value: str) -> str:
     buffer = io.BytesIO()
     image.save(buffer, format='PNG')
     return base64.b64encode(buffer.getvalue()).decode('ascii')
+
+
+def scan_customer_loyalty(customer: User):
+    loyalty_service = LoyaltyService()
+    result = loyalty_service.scan(
+        count=customer.coffee_count,
+        reward_available=customer.free_coffee_available,
+    )
+    customer.coffee_count = 0 if result.reset_applied else min(customer.coffee_count + 1, loyalty_service.program.required_paid_coffees)
+    customer.free_coffee_available = result.reward_available
+    customer.loyalty_status = result.status
+    customer.save(update_fields=['coffee_count', 'free_coffee_available', 'loyalty_status'])
+    return result
+
+
+def get_customer_by_qr_code(qr_code_uuid):
+    return User.objects.filter(qr_code_uuid=qr_code_uuid, role=UserRole.CUSTOMER).first()
