@@ -16,4 +16,5 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY . .
 
 RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
-CMD ["/app/entrypoint.sh"]
+
+CMD ["sh", "/app/entrypoint.sh"]
