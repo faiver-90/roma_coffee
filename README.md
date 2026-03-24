@@ -92,23 +92,11 @@ qrcode[pil]>=8.2
 
 ## Переменные окружения
 
-Пример `.env`:
+Примеры:
 
-```env
-DJANGO_SECRET_KEY=change-me
-DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
-DJANGO_CSRF_TRUSTED_ORIGINS=
-
-POSTGRES_DB=roma_coffee
-POSTGRES_USER=roma_user
-POSTGRES_PASSWORD=roma_password
-POSTGRES_HOST=127.0.0.1
-POSTGRES_PORT=5432
-
-AUTH_COOKIE_SECURE=False
-AUTH_COOKIE_SAMESITE=Lax
-```
+- Локально (приложение на машине, БД локально): `.env.local.example`
+- Docker Compose (app+db в Docker): `.env.docker.example`
+- Общий пример: `.env.example`
 
 Примечания:
 - `DJANGO_ALLOWED_HOSTS` — без `http://` и `https://`
@@ -167,23 +155,7 @@ python manage.py runserver 0.0.0.0:8000
 
 Для контейнера `web` хост БД должен быть не `127.0.0.1`, а имя сервиса `db`.
 
-Пример:
-
-```env
-DJANGO_SECRET_KEY=change-me
-DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
-DJANGO_CSRF_TRUSTED_ORIGINS=
-
-POSTGRES_DB=roma_coffee
-POSTGRES_USER=roma_user
-POSTGRES_PASSWORD=roma_password
-POSTGRES_HOST=db
-POSTGRES_PORT=5432
-
-AUTH_COOKIE_SECURE=False
-AUTH_COOKIE_SAMESITE=Lax
-```
+Пример: `.env.docker.example`
 
 ### Сборка и запуск
 

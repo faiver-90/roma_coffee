@@ -15,6 +15,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +34,14 @@ def get_bool_env(name: str, default: bool = False) -> bool:
 def get_list_env(name: str, default: str = "") -> list[str]:
     value = get_env(name, default) or ""
     return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def get_env_any(names: list[str], default: str | None = None) -> str | None:
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return default
 
 
 # Quick-start development settings - unsuitable for production
@@ -95,16 +104,23 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': get_env('DB_ENGINE', 'django.db.backends.postgresql'),
-        'NAME': get_env('POSTGRES_DB', 'roma_coffee'),
-        'USER': get_env('POSTGRES_USER', 'roma_user'),
-        'PASSWORD': get_env('POSTGRES_PASSWORD', 'roma_password'),
-        'HOST': get_env('POSTGRES_HOST', '127.0.0.1'),
-        'PORT': get_env('POSTGRES_PORT', '5432'),
+DATABASE_URL = get_env_any(['DATABASE_URL', 'RAILWAY_DATABASE_URL'])
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=60)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': get_env('DB_ENGINE', 'django.db.backends.postgresql'),
+            'NAME': get_env_any(['PGDATABASE', 'POSTGRES_DB'], 'roma_coffee'),
+            'USER': get_env_any(['PGUSER', 'POSTGRES_USER'], 'roma_user'),
+            'PASSWORD': get_env_any(['PGPASSWORD', 'POSTGRES_PASSWORD'], 'roma_password'),
+            'HOST': get_env_any(['PGHOST', 'POSTGRES_HOST'], '127.0.0.1'),
+            'PORT': get_env_any(['PGPORT', 'POSTGRES_PORT'], '5432'),
+        }
+    }
 
 
 # Password validation
