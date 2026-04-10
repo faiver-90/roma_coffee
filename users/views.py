@@ -55,7 +55,10 @@ class RoleRequiredView(AuthenticatedTemplateView):
         response = super().dispatch(request, *args, **kwargs)
         if not hasattr(self, 'auth_user') or self.auth_user is None:
             return response
-        if self.required_role is not None and self.auth_user.role != self.required_role:
+        allowed_roles = self.required_role
+        if allowed_roles is not None and not isinstance(allowed_roles, (tuple, list, set, frozenset)):
+            allowed_roles = (allowed_roles,)
+        if allowed_roles is not None and self.auth_user.role not in allowed_roles:
             messages.error(request, 'Недостаточно прав для этого раздела.')
             return redirect(self.denied_redirect_name)
         return response
@@ -67,7 +70,7 @@ class LoginView(View):
     @staticmethod
     def get_success_url(user) -> str:
         if user.is_admin:
-            return 'users:admin_dashboard'
+            return 'users:barista_dashboard'
         if user.is_barista:
             return 'users:barista_dashboard'
         return 'users:dashboard'
@@ -131,7 +134,7 @@ class DashboardView(AuthenticatedTemplateView):
 
     def get(self, request: HttpRequest) -> HttpResponse:
         if self.auth_user.is_admin:
-            return redirect('users:admin_dashboard')
+            return redirect('users:barista_dashboard')
 
         qr_code_image = None
         if self.auth_user.qr_code_uuid:
@@ -200,13 +203,21 @@ class DashboardQrRefreshView(AuthenticatedTemplateView):
 
 
 class BaristaDashboardView(RoleRequiredView):
-    required_role = UserRole.BARISTA
+    required_role = (UserRole.BARISTA, UserRole.ADMIN)
     template_name = 'auth/barista_dashboard.html'
     session_key = 'barista_scan_result'
 
     def get(self, request: HttpRequest) -> HttpResponse:
         scan_result = request.session.pop(self.session_key, None)
-        return render(request, self.template_name, {'form': BaristaScanForm(), 'scan_result': scan_result})
+        return render(
+            request,
+            self.template_name,
+            {
+                'form': BaristaScanForm(),
+                'scan_result': scan_result,
+                'show_stats_link': self.auth_user.is_admin,
+            },
+        )
 
     def post(self, request: HttpRequest) -> HttpResponse:
         form = BaristaScanForm(request.POST)

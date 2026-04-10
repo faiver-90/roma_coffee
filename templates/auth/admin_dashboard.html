@@ -1,4 +1,5 @@
-{% extends "auth/layout.html" %} {% block title %}Статистика | Roma Coffee{%endblock %} {% block extra_head %} {{ block.super }}
+{% extends "auth/layout.html" %} {% block title %}Статистика | Roma Coffee{%endblock %} 
+{% block extra_head %} {{ block.super }}
 <style>
     .stats-grid {
         display: grid;
@@ -47,19 +48,25 @@
         }
     }
 </style>
-{% endblock %} {% block aside_text %}Выберите период и посмотрите статистику повсем сканированиям и подарочным кофе.{% endblock %} {% block auth_content %}
+{% endblock %} {% block aside_text %}Выберите период и посмотрите статистику по всем сканированиям и подарочным кофе.{% endblock %} 
+{% block auth_content %}
 <h2>Статистика</h2>
 <p>Период: {{ start_date|date:"d.m.Y" }} - {{ end_date|date:"d.m.Y" }}</p>
 
 <form method="get" class="auth-form">
     {% include "components/form_errors.html" with form=form %}
     <div class="filter-grid">
-        {% include "components/input.html" with field=form.start_date %} {%        include "components/input.html" with field=form.end_date %}
+        {% include "components/input.html" with field=form.start_date %} {% include "components/input.html" with field=form.end_date %}
     </div>
     {% include "components/button.html" with label="Показать" %}
 </form>
 
 <div class="actions-row">
+    <a
+        class="button button-secondary"
+        href="{% url 'users:barista_dashboard' %}"
+        >Кабинет баристы</a
+    >
     <form method="post" action="{% url 'users:logout' %}">
         {% csrf_token %}
         <button class="button button-secondary" type="submit">Выйти</button>

@@ -1,7 +1,4 @@
-{% extends "auth/layout.html" %}
-{% block title %}Кабинет баристы | Roma Coffee{% endblock %}
-{% block extra_head %}
-{{ block.super }}
+{% extends "auth/layout.html" %} {% block title %}Кабинет баристы | Roma Coffee{% endblock %} {% block extra_head %} {{ block.super }}
 <style>
     .scanner-panel {
         display: grid;
@@ -99,25 +96,36 @@
         }
     }
 </style>
-{% endblock %}
-{% block auth_content %}
+{% endblock %} {% block auth_content %}
 <h2>Кабинет баристы</h2>
 <div class="stack">
     <div class="scanner-panel">
-        <button class="button scanner-primary" type="button" id="start-scanner-button">Запустить сканер</button>
+        <button
+            class="button scanner-primary"
+            type="button"
+            id="start-scanner-button"
+        >
+            Запустить сканер
+        </button>
         <div class="scanner-box" id="qr-reader"></div>
         <div class="scanner-secondary-row">
-            <a class="button button-secondary" href="{% url 'users:dashboard' %}">В кабинет</a>
+            {% if show_stats_link %}
+            <a
+                class="button button-secondary"
+                href="{% url 'users:admin_dashboard' %}"
+                >Статистика</a
+            >
+            {% endif %}
         </div>
-        <div class="scanner-status" id="scanner-status">Нажмите на большую кнопку выше, чтобы открыть камеру и начать сканирование.</div>
+        <div class="scanner-status" id="scanner-status">
+            Нажмите на большую кнопку выше, чтобы открыть камеру и начать
+            сканирование.
+        </div>
     </div>
 
     <form method="post" class="auth-form" id="barista-scan-form">
-        {% csrf_token %}
-        {% include "components/form_errors.html" with form=form %}
-        {% include "components/input.html" with field=form.qr_code_uuid %}
-        {% include "components/button.html" with label="Отметить кофе" %}
-
+        {% csrf_token %} {% include "components/form_errors.html" with form=form  %} {% include "components/input.html" with field=form.qr_code_uuid %}
+        {%        include "components/button.html" with label="Отметить кофе" %}
     </form>
     <form method="post" action="{% url 'users:logout' %}">
         {% csrf_token %}
@@ -134,116 +142,142 @@
     </div>
     <div class="field">
         <span class="field-label">Действие</span>
-        <div class="field-help">{% if scan_result.celebration_modal %}Подарочный кофе активирован.{% else %}{{ scan_result.barista_message }}{% endif %}</div>
+        <div class="field-help">
+            {% if scan_result.celebration_modal %}Подарочный кофе активирован.{% else %}{{ scan_result.barista_message }}{% endif %}
+        </div>
     </div>
     {% endif %}
 </div>
 
-<div class="celebration-modal" id="barista-celebration-modal"{% if not scan_result or not scan_result.celebration_modal %} hidden{% endif %}>
+<div
+    class="celebration-modal"
+    id="barista-celebration-modal"
+    {%
+    if
+    not
+    scan_result
+    or
+    not
+    scan_result.celebration_modal
+    %}
+    hidden{%
+    endif
+    %}
+>
     <div class="celebration-card">
-        <h3>{% if scan_result and scan_result.celebration_modal %}{{ scan_result.celebration_modal.title }}{% else %}Подарочный кофе{% endif %}</h3>
-        <p>{% if scan_result and scan_result.celebration_modal %}{{ scan_result.celebration_modal.message }}{% endif %}</p>
-        <button class="button" type="button" id="barista-celebration-close">Понятно</button>
+        <h3>
+            {% if scan_result and scan_result.celebration_modal %}{{ scan_result.celebration_modal.title }}{% else %}Подарочный кофе{% endif %}
+        </h3>
+        <p>
+            {% if scan_result and scan_result.celebration_modal %}{{ scan_result.celebration_modal.message }}{% endif %}
+        </p>
+        <button class="button" type="button" id="barista-celebration-close">
+            Понятно
+        </button>
     </div>
 </div>
 
 <script src="https://unpkg.com/html5-qrcode" defer></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    const startButton = document.getElementById("start-scanner-button");
-    const status = document.getElementById("scanner-status");
-    const form = document.getElementById("barista-scan-form");
-    const input = document.getElementById("id_qr_code_uuid");
-    const modal = document.getElementById("barista-celebration-modal");
-    const modalClose = document.getElementById("barista-celebration-close");
+    document.addEventListener("DOMContentLoaded", () => {
+        const startButton = document.getElementById("start-scanner-button");
+        const status = document.getElementById("scanner-status");
+        const form = document.getElementById("barista-scan-form");
+        const input = document.getElementById("id_qr_code_uuid");
+        const modal = document.getElementById("barista-celebration-modal");
+        const modalClose = document.getElementById("barista-celebration-close");
 
-    const closeModal = () => {
-        if (modal) {
-            modal.hidden = true;
-        }
-    };
-
-    if (modalClose) {
-        modalClose.addEventListener("click", closeModal);
-    }
-    if (modal) {
-        modal.addEventListener("click", (event) => {
-            if (event.target === modal) {
-                closeModal();
+        const closeModal = () => {
+            if (modal) {
+                modal.hidden = true;
             }
-        });
-    }
+        };
 
-    if (!startButton || !status || !form || !input) {
-        return;
-    }
+        if (modalClose) {
+            modalClose.addEventListener("click", closeModal);
+        }
+        if (modal) {
+            modal.addEventListener("click", (event) => {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            });
+        }
 
-    let scanner = null;
-    let scannerRunning = false;
+        if (!startButton || !status || !form || !input) {
+            return;
+        }
 
-    const setStatus = (message) => {
-        status.textContent = message;
-    };
+        let scanner = null;
+        let scannerRunning = false;
 
-    const stopScanner = async () => {
-        if (!scanner || !scannerRunning) {
+        const setStatus = (message) => {
+            status.textContent = message;
+        };
+
+        const stopScanner = async () => {
+            if (!scanner || !scannerRunning) {
+                setStatus("Сканер остановлен.");
+                return;
+            }
+
+            try {
+                await scanner.stop();
+                await scanner.clear();
+            } catch (error) {
+                console.error(error);
+            }
+
+            scannerRunning = false;
             setStatus("Сканер остановлен.");
-            return;
-        }
+        };
 
-        try {
-            await scanner.stop();
-            await scanner.clear();
-        } catch (error) {
-            console.error(error);
-        }
+        const handleSuccess = async (decodedText) => {
+            input.value = decodedText.trim();
+            setStatus("QR-код считан. Отправляю отметку...");
+            await stopScanner();
+            form.submit();
+        };
 
-        scannerRunning = false;
-        setStatus("Сканер остановлен.");
-    };
+        const startScanner = async () => {
+            if (typeof Html5Qrcode === "undefined") {
+                setStatus(
+                    "Не удалось загрузить библиотеку сканера. Проверьте интернет на телефоне.",
+                );
+                return;
+            }
 
-    const handleSuccess = async (decodedText) => {
-        input.value = decodedText.trim();
-        setStatus("QR-код считан. Отправляю отметку...");
-        await stopScanner();
-        form.submit();
-    };
+            if (scannerRunning) {
+                setStatus("Сканер уже запущен.");
+                return;
+            }
 
-    const startScanner = async () => {
-        if (typeof Html5Qrcode === "undefined") {
-            setStatus("Не удалось загрузить библиотеку сканера. Проверьте интернет на телефоне.");
-            return;
-        }
+            try {
+                scanner = new Html5Qrcode("qr-reader");
+                await scanner.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        qrbox: { width: 220, height: 220 },
+                        aspectRatio: 1,
+                    },
+                    handleSuccess,
+                    () => {},
+                );
+                scannerRunning = true;
+                setStatus("Сканер запущен. Наведите камеру на QR-код.");
+            } catch (error) {
+                console.error(error);
+                setStatus(
+                    "Не удалось запустить камеру. Проверьте разрешение браузера и HTTPS.",
+                );
+            }
+        };
 
-        if (scannerRunning) {
-            setStatus("Сканер уже запущен.");
-            return;
-        }
-
-        try {
-            scanner = new Html5Qrcode("qr-reader");
-            await scanner.start(
-                { facingMode: "environment" },
-                {
-                    fps: 10,
-                    qrbox: { width: 220, height: 220 },
-                    aspectRatio: 1,
-                },
-                handleSuccess,
-                () => {}
-            );
-            scannerRunning = true;
-            setStatus("Сканер запущен. Наведите камеру на QR-код.");
-        } catch (error) {
-            console.error(error);
-            setStatus("Не удалось запустить камеру. Проверьте разрешение браузера и HTTPS.");
-        }
-    };
-
-    startButton.addEventListener("click", startScanner);
-    window.addEventListener("beforeunload", () => {
-        stopScanner();
+        startButton.addEventListener("click", startScanner);
+        window.addEventListener("beforeunload", () => {
+            stopScanner();
+        });
     });
-});
 </script>
 {% endblock %}
