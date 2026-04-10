@@ -85,6 +85,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.role == UserRole.BARISTA
 
     @property
+    def is_admin(self) -> bool:
+        return self.role == UserRole.ADMIN
+
+    @property
     def loyalty_status_text(self) -> str:
         program = LoyaltyProgram()
         return program.message_for_status(LoyaltyStatus(self.loyalty_status))
