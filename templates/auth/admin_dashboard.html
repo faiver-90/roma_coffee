@@ -60,6 +60,7 @@
     </div>
     {% include "components/button.html" with label="Показать" %}
 </form>
+<br>
 
 <div class="actions-row">
     <a
@@ -67,11 +68,13 @@
         href="{% url 'users:barista_dashboard' %}"
         >Кабинет баристы</a
     >
-    <form method="post" action="{% url 'users:logout' %}">
-        {% csrf_token %}
-        <button class="button button-secondary" type="submit">Выйти</button>
-    </form>
 </div>
+<br>
+<form method="post" action="{% url 'users:logout' %}">
+    {% csrf_token %}
+    <button class="button button-secondary" type="submit">Выйти</button>
+</form>
+<br>
 
 <div class="stats-grid">
     <div class="stats-card">
