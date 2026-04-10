@@ -84,11 +84,11 @@ def build_barista_dashboard_view_model(user, *, qr_code_image: str | None, dashb
         DashboardAction(label='Выйти', method='post', url=logout_url),
     ]
     links = [
-        DashboardAction(label='Открыть кабинет баристы', method='get', url=barista_url),
+        DashboardAction(label='Открыть кабинет бариста', method='get', url=barista_url),
     ]
     return {
         'heading': 'Личный кабинет',
-        'description': 'У баристы отдельный экран для сканирования QR-кодов клиентов.',
+        'description': 'У бариста отдельный экран для сканирования QR-кодов клиентов.',
         'cards': cards,
         'actions': actions,
         'links': links,
