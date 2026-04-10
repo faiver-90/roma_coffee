@@ -60,9 +60,14 @@ class RoleRequiredView(AuthenticatedTemplateView):
 class LoginView(View):
     template_name = 'auth/login.html'
 
+    @staticmethod
+    def get_success_url(user) -> str:
+        return 'users:barista_dashboard' if user.is_barista else 'users:dashboard'
+
     def get(self, request: HttpRequest) -> HttpResponse:
-        if get_user_from_access_cookie(request):
-            return redirect('users:dashboard')
+        user = get_user_from_access_cookie(request)
+        if user:
+            return redirect(self.get_success_url(user))
         return render(request, self.template_name, {'form': LoginForm(request=request)})
 
     def post(self, request: HttpRequest) -> HttpResponse:
@@ -71,7 +76,7 @@ class LoginView(View):
             return render(request, self.template_name, {'form': form}, status=400)
 
         tokens = issue_tokens_for_user(form.get_user(), request)
-        response = redirect('users:dashboard')
+        response = redirect(self.get_success_url(form.get_user()))
         set_auth_cookies(response, access=tokens['access'], refresh=tokens['refresh'])
         messages.success(request, 'Вы успешно вошли.')
         return response

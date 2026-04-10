@@ -119,8 +119,12 @@
         {% include "components/form_errors.html" with form=form %}
         {% include "components/input.html" with field=form.qr_code_uuid %}
         {% include "components/button.html" with label="Отметить кофе" %}
-    </form>
 
+    </form>
+    <form method="post" action="{% url 'users:logout' %}">
+        {% csrf_token %}
+        <button class="button button-secondary" type="submit">Выйти</button>
+    </form>
     {% if scan_result %}
     <div class="field">
         <span class="field-label">Пользователь</span>
