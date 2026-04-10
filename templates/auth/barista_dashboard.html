@@ -152,21 +152,13 @@
 <div
     class="celebration-modal"
     id="barista-celebration-modal"
-    {%
-    if
-    not
-    scan_result
-    or
-    not
-    scan_result.celebration_modal
-    %}
-    hidden{%
-    endif
-    %}
+    {%    if    not    scan_result    or    not    scan_result.celebration_modal    %}    hidden{%    endif    %}
 >
     <div class="celebration-card">
         <h3>
-            {% if scan_result and scan_result.celebration_modal %}{{ scan_result.celebration_modal.title }}{% else %}Подарочный кофе{% endif %}
+            {% if scan_result and scan_result.celebration_modal %}
+            {{ scan_result.celebration_modal.title }}
+            {% else %}Подарочный кофе{% endif %}
         </h3>
         <p>
             {% if scan_result and scan_result.celebration_modal %}{{ scan_result.celebration_modal.message }}{% endif %}
