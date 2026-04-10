@@ -1,0 +1,79 @@
+{% extends "auth/layout.html" %} {% block title %}Статистика | Roma Coffee{%endblock %} {% block extra_head %} {{ block.super }}
+<style>
+    .stats-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stats-card {
+        padding: 22px;
+        border-radius: 24px;
+        border: 1px solid rgba(87, 53, 31, 0.14);
+        background: rgba(255, 255, 255, 0.68);
+    }
+
+    .stats-card h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        color: var(--muted);
+    }
+
+    .stats-card strong {
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1;
+    }
+
+    .filter-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .actions-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .actions-row form {
+        margin: 0;
+    }
+
+    @media (max-width: 720px) {
+        .stats-grid,
+        .filter-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %} {% block aside_text %}Выберите период и посмотрите статистику повсем сканированиям и подарочным кофе.{% endblock %} {% block auth_content %}
+<h2>Статистика</h2>
+<p>Период: {{ start_date|date:"d.m.Y" }} - {{ end_date|date:"d.m.Y" }}</p>
+
+<form method="get" class="auth-form">
+    {% include "components/form_errors.html" with form=form %}
+    <div class="filter-grid">
+        {% include "components/input.html" with field=form.start_date %} {%        include "components/input.html" with field=form.end_date %}
+    </div>
+    {% include "components/button.html" with label="Показать" %}
+</form>
+
+<div class="actions-row">
+    <form method="post" action="{% url 'users:logout' %}">
+        {% csrf_token %}
+        <button class="button button-secondary" type="submit">Выйти</button>
+    </form>
+</div>
+
+<div class="stats-grid">
+    <div class="stats-card">
+        <h3>Всего отсканировано кофе</h3>
+        <strong>{{ stats.total_scans }}</strong>
+    </div>
+    <div class="stats-card">
+        <h3>Подарочных кофе</h3>
+        <strong>{{ stats.gifted_scans }}</strong>
+    </div>
+</div>
+{% endblock %}

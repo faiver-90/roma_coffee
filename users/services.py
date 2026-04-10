@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from .domain.loyalty import LoyaltyService
 from .domain.roles import UserRole
-from .models import PasswordResetCode, RefreshSession, User
+from .models import PasswordResetCode, RefreshSession, ScanEvent, User
 from .utils import phone_lookup_values
 
 
@@ -87,7 +87,7 @@ def build_qr_code_image_base64(value: str) -> str:
     return base64.b64encode(buffer.getvalue()).decode('ascii')
 
 
-def scan_customer_loyalty(customer: User):
+def scan_customer_loyalty(customer: User, *, barista: User | None = None):
     loyalty_service = LoyaltyService()
     result = loyalty_service.scan(
         count=customer.coffee_count,
@@ -97,6 +97,11 @@ def scan_customer_loyalty(customer: User):
     customer.free_coffee_available = result.reward_available
     customer.loyalty_status = result.status
     customer.save(update_fields=['coffee_count', 'free_coffee_available', 'loyalty_status'])
+    ScanEvent.objects.create(
+        customer=customer,
+        barista=barista,
+        is_gifted=result.reset_applied,
+    )
     return result
 
 

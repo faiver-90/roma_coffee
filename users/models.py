@@ -185,3 +185,23 @@ class PasswordResetCode(models.Model):
         if self.used_at is None:
             self.used_at = timezone.now()
             self.save(update_fields=['used_at'])
+
+
+class ScanEvent(models.Model):
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='scan_events',
+    )
+    barista = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='performed_scan_events',
+    )
+    is_gifted = models.BooleanField(default=False)
+    scanned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-scanned_at']

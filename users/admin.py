@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import PasswordResetCode, RefreshSession, User
+from .models import PasswordResetCode, RefreshSession, ScanEvent, User
 
 
 @admin.register(User)
@@ -81,3 +81,11 @@ class PasswordResetCodeAdmin(admin.ModelAdmin):
     list_display = ('user', 'expires_at', 'used_at', 'created_at')
     search_fields = ('user__phone',)
     readonly_fields = ('code_hash', 'created_at')
+
+
+@admin.register(ScanEvent)
+class ScanEventAdmin(admin.ModelAdmin):
+    list_display = ('scanned_at', 'customer', 'barista', 'is_gifted')
+    list_filter = ('is_gifted', 'scanned_at')
+    search_fields = ('customer__phone', 'barista__phone')
+    readonly_fields = ('scanned_at',)

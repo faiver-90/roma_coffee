@@ -1,9 +1,13 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Count, Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.urls import reverse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views import View
 from rest_framework_simplejwt.exceptions import TokenError
 
@@ -11,8 +15,8 @@ from .api import clear_auth_cookies, set_auth_cookies
 from .authentication import get_user_from_access_cookie
 from .domain.roles import UserRole
 from .forms_barista import BaristaScanForm
-from .forms import LoginForm, PasswordResetConfirmForm, PasswordResetRequestForm, RegisterForm
-from .models import User
+from .forms import AdminStatsFilterForm, LoginForm, PasswordResetConfirmForm, PasswordResetRequestForm, RegisterForm
+from .models import ScanEvent, User
 from .presenters import (
     build_barista_dashboard_view_model,
     build_customer_dashboard_view_model,
@@ -62,7 +66,11 @@ class LoginView(View):
 
     @staticmethod
     def get_success_url(user) -> str:
-        return 'users:barista_dashboard' if user.is_barista else 'users:dashboard'
+        if user.is_admin:
+            return 'users:admin_dashboard'
+        if user.is_barista:
+            return 'users:barista_dashboard'
+        return 'users:dashboard'
 
     def get(self, request: HttpRequest) -> HttpResponse:
         user = get_user_from_access_cookie(request)
@@ -122,6 +130,9 @@ class DashboardView(AuthenticatedTemplateView):
     template_name = 'auth/dashboard.html'
 
     def get(self, request: HttpRequest) -> HttpResponse:
+        if self.auth_user.is_admin:
+            return redirect('users:admin_dashboard')
+
         qr_code_image = None
         if self.auth_user.qr_code_uuid:
             qr_code_image = build_qr_code_image_base64(str(self.auth_user.qr_code_uuid))
@@ -207,10 +218,51 @@ class BaristaDashboardView(RoleRequiredView):
             form.add_error('qr_code_uuid', 'Пользователь с таким QR-кодом не найден.')
             return render(request, self.template_name, {'form': form, 'scan_result': None}, status=404)
 
-        loyalty_state = scan_customer_loyalty(customer)
+        loyalty_state = scan_customer_loyalty(customer, barista=self.auth_user)
         messages.success(request, loyalty_state.barista_message)
         request.session[self.session_key] = build_scan_result_view_model(customer, loyalty_state)
         return redirect('users:barista_dashboard')
+
+
+class AdminDashboardView(RoleRequiredView):
+    required_role = UserRole.ADMIN
+    template_name = 'auth/admin_dashboard.html'
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        form = AdminStatsFilterForm(request.GET or None)
+        stats = {
+            'total_scans': 0,
+            'gifted_scans': 0,
+        }
+
+        if form.is_valid():
+            start_date = form.cleaned_data['start_date']
+            end_date = form.cleaned_data['end_date']
+        else:
+            today = timezone.localdate()
+            start_date = today - timedelta(days=29)
+            end_date = today
+
+        queryset = ScanEvent.objects.filter(
+            scanned_at__date__gte=start_date,
+            scanned_at__date__lte=end_date,
+        )
+        aggregated = queryset.aggregate(
+            total_scans=Count('id'),
+            gifted_scans=Count('id', filter=Q(is_gifted=True)),
+        )
+        stats.update(aggregated)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                'form': form,
+                'stats': stats,
+                'start_date': start_date,
+                'end_date': end_date,
+            },
+        )
 
 
 class PasswordResetView(View):

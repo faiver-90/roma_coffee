@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django import forms
+from django.utils import timezone
 from django.contrib.auth import authenticate, password_validation
 from django.core.exceptions import ValidationError
 
@@ -159,4 +162,30 @@ class PasswordResetConfirmForm(PhoneInputMixin, forms.Form):
             except ValidationError as exc:
                 self.add_error('password1', exc)
 
+        return cleaned_data
+
+
+class AdminStatsFilterForm(forms.Form):
+    start_date = forms.DateField(
+        label='Дата с',
+        widget=forms.DateInput(attrs={'type': 'date'}),
+    )
+    end_date = forms.DateField(
+        label='Дата по',
+        widget=forms.DateInput(attrs={'type': 'date'}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            today = timezone.localdate()
+            self.initial['end_date'] = today
+            self.initial['start_date'] = today - timedelta(days=29)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        if start_date and end_date and start_date > end_date:
+            self.add_error('end_date', 'Дата окончания должна быть не раньше даты начала.')
         return cleaned_data
