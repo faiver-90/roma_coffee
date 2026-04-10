@@ -77,7 +77,6 @@ def build_customer_dashboard_view_model(user, *, qr_code_image: str | None, dash
 def build_barista_dashboard_view_model(user, *, qr_code_image: str | None, dashboard_url: str, barista_url: str, logout_url: str) -> dict:
     cards = [
         DashboardCard(key='role', label='Роль', value=user.get_role_display()),
-        DashboardCard(key='phone', label='Телефон', value=user.formatted_phone),
         DashboardCard(key='qr_code_uuid', label='UUID для QR', value=str(user.qr_code_uuid) if user.qr_code_uuid else 'QR-код еще не создан.'),
     ]
     actions = [
