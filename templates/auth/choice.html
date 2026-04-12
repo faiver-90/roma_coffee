@@ -1,0 +1,35 @@
+{% extends "auth/layout.html" %}
+
+{% block title %} Вход или регистрация | Roma Coffee {% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    .choice-actions {
+        display: grid;
+        gap: 14px;
+        margin-top: 26px;
+    }
+
+    .choice-actions .button {
+        width: 100%;
+        min-height: 56px;
+        font-size: 1.05rem;
+    }
+</style>
+{% endblock %}
+
+{% block aside_text %}
+Выберите, что нужно сделать сейчас: войти в свой аккаунт или создать новый.
+{% endblock %}
+
+{% block auth_content %}
+<h2>Добро пожаловать</h2>
+<p>Продолжите с номером телефона.</p>
+<div class="choice-actions">
+    {% url "users:login" as login_url %}
+    {% url "users:register" as register_url %}
+    {% include "components/button.html" with href=login_url label="Вход" %}
+    {% include "components/button.html" with href=register_url label="Регистрация" variant="secondary" %}
+</div>
+{% endblock %}

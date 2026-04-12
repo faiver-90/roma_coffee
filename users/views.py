@@ -33,6 +33,16 @@ from .services import (
 )
 
 
+class AuthChoiceView(View):
+    template_name = 'auth/choice.html'
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        user = get_user_from_access_cookie(request)
+        if user:
+            return redirect(LoginView.get_success_url(user))
+        return render(request, self.template_name)
+
+
 class AuthenticatedTemplateView(View):
     template_name = ''
 

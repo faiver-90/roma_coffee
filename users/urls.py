@@ -9,11 +9,23 @@ from .api import (
     RefreshApiView,
     RegisterApiView,
 )
-from .views import AdminDashboardView, BaristaDashboardView, DashboardQrRefreshView, DashboardStateView, DashboardView, LoginView, LogoutView, PasswordResetView, RegisterView
+from .views import (
+    AdminDashboardView,
+    AuthChoiceView,
+    BaristaDashboardView,
+    DashboardQrRefreshView,
+    DashboardStateView,
+    DashboardView,
+    LoginView,
+    LogoutView,
+    PasswordResetView,
+    RegisterView,
+)
 
 app_name = 'users'
 
 urlpatterns = [
+    path('', AuthChoiceView.as_view(), name='auth_choice'),
     path('admin-dashboard/', AdminDashboardView.as_view(), name='admin_dashboard'),
     path('barista/', BaristaDashboardView.as_view(), name='barista_dashboard'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
