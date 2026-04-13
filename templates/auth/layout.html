@@ -167,6 +167,113 @@
 {% endblock %} {% block extra_body %}
 <script>
     (() => {
+        const REFRESH_URL = "{% url 'users:api_refresh' %}";
+        const ME_URL = "{% url 'users:api_me' %}";
+        const PUBLIC_PATHS = new Set([
+            "{% url 'users:auth_choice' %}",
+            "{% url 'users:login' %}",
+            "{% url 'users:register' %}",
+            "{% url 'users:password_reset' %}",
+        ]);
+        const HEARTBEAT_INTERVAL_MS = 4 * 60 * 1000;
+        const HEARTBEAT_START_DELAY_MS = 20 * 1000;
+        let refreshInFlight = null;
+
+        const isPublicPage = () => PUBLIC_PATHS.has(window.location.pathname);
+
+        const withDefaultFetchOptions = (init = {}) => ({
+            credentials: "same-origin",
+            ...init,
+        });
+
+        const tryRefresh = async () => {
+            if (refreshInFlight) {
+                return refreshInFlight;
+            }
+            refreshInFlight = (async () => {
+                const response = await fetch(
+                    REFRESH_URL,
+                    withDefaultFetchOptions({
+                        method: "POST",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                    }),
+                );
+                if (!response.ok) {
+                    throw new Error("Refresh failed");
+                }
+            })();
+
+            try {
+                await refreshInFlight;
+            } finally {
+                refreshInFlight = null;
+            }
+        };
+
+        const handleAuthFailure = () => {
+            if (isPublicPage()) {
+                return;
+            }
+            window.location.assign("{% url 'users:login' %}");
+        };
+
+        const fetchWithRefresh = async (input, init = {}, options = {}) => {
+            const allowRefresh = options.allowRefresh !== false;
+            const requestInit = withDefaultFetchOptions(init);
+            let response = await fetch(input, requestInit);
+            if (response.status !== 401 || !allowRefresh) {
+                return response;
+            }
+
+            try {
+                await tryRefresh();
+            } catch (error) {
+                handleAuthFailure();
+                return response;
+            }
+
+            response = await fetch(input, requestInit);
+            if (response.status === 401) {
+                handleAuthFailure();
+            }
+            return response;
+        };
+
+        const heartbeat = async () => {
+            if (isPublicPage()) {
+                return;
+            }
+            try {
+                const response = await fetchWithRefresh(
+                    ME_URL,
+                    {
+                        method: "GET",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                    },
+                    { allowRefresh: true },
+                );
+                if (response.status === 401) {
+                    handleAuthFailure();
+                }
+            } catch (error) {
+                // Avoid log noise for background check; user flow is handled by redirects on auth failure.
+            }
+        };
+
+        window.romaAuth = {
+            fetchWithRefresh,
+            heartbeat,
+        };
+
+        window.setTimeout(() => {
+            heartbeat();
+            window.setInterval(heartbeat, HEARTBEAT_INTERVAL_MS);
+        }, HEARTBEAT_START_DELAY_MS);
+
         const applyPhoneMask = (input) => {
             const digits = (input.value || "").replace(/\D/g, "");
             const localDigits = digits.replace(/^[78]/, "").slice(0, 10);

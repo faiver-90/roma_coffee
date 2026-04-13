@@ -130,6 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalTitle = document.getElementById("celebration-title");
     const modalMessage = document.getElementById("celebration-message");
     const modalClose = document.getElementById("celebration-close");
+    const fetchWithRefresh = window.romaAuth?.fetchWithRefresh;
     const seenModalKey = "dashboard_seen_celebration_modal";
     const initialTitle = modalTitle?.textContent?.trim() || "";
     const initialMessage = modalMessage?.textContent?.trim() || "";
@@ -181,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         try {
-            const response = await fetch(stateUrl, {
+            const response = await (fetchWithRefresh || fetch)(stateUrl, {
                 method: "GET",
                 credentials: "same-origin",
                 headers: {
@@ -211,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         refreshQrButton.disabled = true;
         try {
-            const response = await fetch(qrRefreshUrl, {
+            const response = await (fetchWithRefresh || fetch)(qrRefreshUrl, {
                 method: "POST",
                 credentials: "same-origin",
                 headers: {
