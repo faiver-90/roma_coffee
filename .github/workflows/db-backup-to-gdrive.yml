@@ -14,7 +14,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-client rclone
+          sudo apt-get install -y rclone
 
       - name: Create database dump
         env:
@@ -26,7 +26,11 @@ jobs:
           fi
           TS="$(date -u +%Y-%m-%d_%H-%M-%S)"
           BACKUP_FILE="railway_backup_${TS}.dump"
-          pg_dump --dbname="${DATABASE_URL}" --format=custom --no-owner --no-privileges --file="${BACKUP_FILE}"
+          docker run --rm \
+            -e DATABASE_URL="${DATABASE_URL}" \
+            -v "${PWD}:/work" \
+            postgres:18 \
+            pg_dump --dbname="${DATABASE_URL}" --format=custom --no-owner --no-privileges --file="/work/${BACKUP_FILE}"
           echo "BACKUP_FILE=${BACKUP_FILE}" >> "${GITHUB_ENV}"
 
       - name: Decode Google service account key
