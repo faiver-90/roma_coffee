@@ -33,24 +33,15 @@ jobs:
             pg_dump --dbname="${DATABASE_URL}" --format=custom --no-owner --no-privileges --file="/work/${BACKUP_FILE}"
           echo "BACKUP_FILE=${BACKUP_FILE}" >> "${GITHUB_ENV}"
 
-      - name: Decode Google service account key
+      - name: Decode rclone config
         env:
-          SA_JSON_B64: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON_B64 }}
+          RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
         run: |
-          if [ -z "${SA_JSON_B64}" ]; then
-            echo "GDRIVE_SERVICE_ACCOUNT_JSON_B64 is not set"
+          if [ -z "${RCLONE_CONFIG_B64}" ]; then
+            echo "RCLONE_CONFIG_B64 is not set"
             exit 1
           fi
-          echo "${SA_JSON_B64}" | base64 -d > sa.json
-
-      - name: Configure rclone
-        run: |
-          cat > rclone.conf <<'EOF'
-          [gdrive]
-          type = drive
-          scope = drive.file
-          service_account_file = sa.json
-          EOF
+          echo "${RCLONE_CONFIG_B64}" | base64 -d > rclone.conf
 
       - name: Upload dump to Google Drive folder
         env:
