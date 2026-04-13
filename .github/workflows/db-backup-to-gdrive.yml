@@ -1,0 +1,65 @@
+name: DB Backup to Google Drive
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client rclone
+
+      - name: Create database dump
+        env:
+          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "RAILWAY_DATABASE_URL is not set"
+            exit 1
+          fi
+          TS="$(date -u +%Y-%m-%d_%H-%M-%S)"
+          BACKUP_FILE="railway_backup_${TS}.dump"
+          pg_dump --dbname="${DATABASE_URL}" --format=custom --no-owner --no-privileges --file="${BACKUP_FILE}"
+          echo "BACKUP_FILE=${BACKUP_FILE}" >> "${GITHUB_ENV}"
+
+      - name: Decode Google service account key
+        env:
+          SA_JSON_B64: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON_B64 }}
+        run: |
+          if [ -z "${SA_JSON_B64}" ]; then
+            echo "GDRIVE_SERVICE_ACCOUNT_JSON_B64 is not set"
+            exit 1
+          fi
+          echo "${SA_JSON_B64}" | base64 -d > sa.json
+
+      - name: Configure rclone
+        run: |
+          cat > rclone.conf <<'EOF'
+          [gdrive]
+          type = drive
+          scope = drive.file
+          service_account_file = sa.json
+          EOF
+
+      - name: Upload dump to Google Drive folder
+        env:
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          if [ -z "${GDRIVE_FOLDER_ID}" ]; then
+            echo "GDRIVE_FOLDER_ID is not set"
+            exit 1
+          fi
+          rclone --config rclone.conf copy "${BACKUP_FILE}" "gdrive:{${GDRIVE_FOLDER_ID}}"
+
+      - name: Cleanup old dumps (older than 30 days)
+        env:
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          rclone --config rclone.conf delete --min-age 30d "gdrive:{${GDRIVE_FOLDER_ID}}"
