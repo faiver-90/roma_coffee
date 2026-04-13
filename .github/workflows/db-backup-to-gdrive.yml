@@ -51,10 +51,17 @@ jobs:
             echo "GDRIVE_FOLDER_ID is not set"
             exit 1
           fi
-          rclone --config rclone.conf copy "${BACKUP_FILE}" "gdrive:{${GDRIVE_FOLDER_ID}}"
+          rclone --config rclone.conf copy "${BACKUP_FILE}" gdrive: --drive-root-folder-id "${GDRIVE_FOLDER_ID}" -v
+
+      - name: Verify uploaded backup exists
+        env:
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          rclone --config rclone.conf lsf gdrive: --drive-root-folder-id "${GDRIVE_FOLDER_ID}"
+          rclone --config rclone.conf lsf gdrive: --drive-root-folder-id "${GDRIVE_FOLDER_ID}" | grep -F "${BACKUP_FILE}"
 
       - name: Cleanup old dumps (older than 30 days)
         env:
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
         run: |
-          rclone --config rclone.conf delete --min-age 30d "gdrive:{${GDRIVE_FOLDER_ID}}"
+          rclone --config rclone.conf delete gdrive: --drive-root-folder-id "${GDRIVE_FOLDER_ID}" --min-age 30d
