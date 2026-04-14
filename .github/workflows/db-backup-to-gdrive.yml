@@ -27,11 +27,24 @@ jobs:
           BACKUP_DATE="$(TZ=Europe/Moscow date +%Y-%m-%d)"
           BACKUP_TIME="$(TZ=Europe/Moscow date +%H-%M-%S)"
           BACKUP_FILE="roma_coffee_${BACKUP_DATE}_${BACKUP_TIME}.sql"
-          docker run --rm \
-            -e DATABASE_URL="${DATABASE_URL}" \
-            -v "${PWD}:/work" \
-            postgres:18 \
-            pg_dump --dbname="${DATABASE_URL}" --format=plain --no-owner --no-privileges --file="/work/${BACKUP_FILE}"
+          for attempt in 1 2 3; do
+            echo "Creating database dump, attempt ${attempt}/3"
+            if docker run --rm \
+              -e DATABASE_URL="${DATABASE_URL}" \
+              -v "${PWD}:/work" \
+              postgres:18 \
+              pg_dump --dbname="${DATABASE_URL}" --format=plain --no-owner --no-privileges --file="/work/${BACKUP_FILE}"; then
+              break
+            fi
+
+            if [ "${attempt}" -eq 3 ]; then
+              echo "Database dump failed after ${attempt} attempts"
+              exit 1
+            fi
+
+            echo "Database dump failed, waiting 60 seconds before retry"
+            sleep 60
+          done
           echo "BACKUP_FILE=${BACKUP_FILE}" >> "${GITHUB_ENV}"
 
       - name: Decode rclone config
