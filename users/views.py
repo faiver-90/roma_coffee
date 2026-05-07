@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -248,6 +249,7 @@ class BaristaDashboardView(RoleRequiredView):
 class AdminDashboardView(RoleRequiredView):
     required_role = UserRole.ADMIN
     template_name = 'auth/admin_dashboard.html'
+    users_per_page = 25
 
     def get(self, request: HttpRequest) -> HttpResponse:
         form = AdminStatsFilterForm(request.GET or None)
@@ -273,6 +275,15 @@ class AdminDashboardView(RoleRequiredView):
             gifted_scans=Count('id', filter=Q(is_gifted=True)),
         )
         stats.update(aggregated)
+        users_stats = (
+            queryset.values('customer__phone')
+            .annotate(total_scans=Count('id'))
+            .order_by('-total_scans', 'customer__phone')
+        )
+        paginator = Paginator(users_stats, self.users_per_page)
+        page_obj = paginator.get_page(request.GET.get('page'))
+        query_params = request.GET.copy()
+        query_params.pop('page', None)
 
         return render(
             request,
@@ -282,6 +293,9 @@ class AdminDashboardView(RoleRequiredView):
                 'stats': stats,
                 'start_date': start_date,
                 'end_date': end_date,
+                'page_obj': page_obj,
+                'users_stats': page_obj.object_list,
+                'page_query': query_params.urlencode(),
             },
         )
 

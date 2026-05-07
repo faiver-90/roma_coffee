@@ -41,10 +41,63 @@
         margin: 0;
     }
 
+    .users-stats {
+        margin-top: 22px;
+        padding: 22px;
+        border-radius: 24px;
+        border: 1px solid rgba(87, 53, 31, 0.14);
+        background: rgba(255, 255, 255, 0.68);
+    }
+
+    .users-stats h3 {
+        margin: 0 0 16px;
+    }
+
+    .users-stats-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .users-stats-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(87, 53, 31, 0.08);
+    }
+
+    .users-stats-row:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+
+    .users-stats-phone {
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    .users-stats-count {
+        color: var(--muted);
+        white-space: nowrap;
+    }
+
+    .pagination {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 18px;
+    }
+
     @media (max-width: 720px) {
         .stats-grid,
         .filter-grid {
             grid-template-columns: 1fr;
+        }
+
+        .users-stats-row {
+            flex-direction: column;
+            align-items: flex-start;
         }
     }
 </style>
@@ -85,5 +138,43 @@
         <h3>Подарочных кофе</h3>
         <strong>{{ stats.gifted_scans }}</strong>
     </div>
+</div>
+
+<div class="users-stats">
+    <h3>Пользователи по сканированиям</h3>
+    {% if users_stats %}
+    <div class="users-stats-list">
+        {% for item in users_stats %}
+        <div class="users-stats-row">
+            <span class="users-stats-phone">{{ item.customer__phone }}</span>
+            <span class="users-stats-count">Всего отсканировано: {{ item.total_scans }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+        <a
+            class="button button-secondary"
+            href="?{% if page_query %}{{ page_query }}&{% endif %}page={{ page_obj.previous_page_number }}"
+            >Назад</a
+        >
+        {% endif %}
+
+        <span>Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+
+        {% if page_obj.has_next %}
+        <a
+            class="button button-secondary"
+            href="?{% if page_query %}{{ page_query }}&{% endif %}page={{ page_obj.next_page_number }}"
+            >Вперёд</a
+        >
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <p>За выбранный период сканирований пока нет.</p>
+    {% endif %}
 </div>
 {% endblock %}
