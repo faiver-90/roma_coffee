@@ -249,7 +249,7 @@ class BaristaDashboardView(RoleRequiredView):
 class AdminDashboardView(RoleRequiredView):
     required_role = UserRole.ADMIN
     template_name = 'auth/admin_dashboard.html'
-    users_per_page = 25
+    users_per_page = 10
 
     def get(self, request: HttpRequest) -> HttpResponse:
         form = AdminStatsFilterForm(request.GET or None)
